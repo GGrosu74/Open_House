@@ -1,3 +1,4 @@
+<?php if (PHP_SAPI !== 'cli') { http_response_code(404); exit; } ?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -23,14 +24,14 @@
                 <h4 class="mb-0"><i class="bi bi-clipboard-check"></i> Test Registrazione Sistema</h4>
             </div>
             <div class="card-body p-4">
-                
+
                 <h5 class="mb-4">📋 Stato Database</h5>
-                
+
                 <?php
                 require_once 'config.php';
-                
+
                 $tests = [];
-                
+
                 // Test 1: Connessione database
                 try {
                     $result = $pdo->query("SELECT 1");
@@ -38,7 +39,7 @@
                 } catch (Exception $e) {
                     $tests['Connessione Database'] = ['❌', 'Errore: ' . $e->getMessage(), 'error'];
                 }
-                
+
                 // Test 2: Tabella istituti_e_partner esiste
                 try {
                     $result = $pdo->query("DESCRIBE istituti_e_partner");
@@ -56,7 +57,7 @@
                 } catch (Exception $e) {
                     $tests['Tabella istituti_e_partner'] = ['❌', 'Errore: ' . $e->getMessage(), 'error'];
                 }
-                
+
                 // Test 3: Tabella utenti_finali esiste
                 try {
                     $result = $pdo->query("DESCRIBE utenti_finali");
@@ -74,7 +75,7 @@
                 } catch (Exception $e) {
                     $tests['Tabella utenti_finali'] = ['❌', 'Errore: ' . $e->getMessage(), 'error'];
                 }
-                
+
                 // Test 4: Conteggio record
                 try {
                     $istituti = $pdo->query("SELECT COUNT(*) as cnt FROM istituti_e_partner")->fetch()['cnt'];
@@ -84,23 +85,23 @@
                 } catch (Exception $e) {
                     $tests['Istituti nel DB'] = ['❌', 'Errore: ' . $e->getMessage(), 'error'];
                 }
-                
+
                 // Test 5: Funzioni PHP
                 if (function_exists('hashPassword')) {
                     $tests['Funzione hashPassword'] = ['✅', 'Disponibile', 'success'];
                 } else {
                     $tests['Funzione hashPassword'] = ['❌', 'Non trovata', 'error'];
                 }
-                
+
                 if (function_exists('sanitize')) {
                     $tests['Funzione sanitize'] = ['✅', 'Disponibile', 'success'];
                 } else {
                     $tests['Funzione sanitize'] = ['❌', 'Non trovata', 'error'];
                 }
-                
+
                 // Stampa risultati
                 ?>
-                
+
                 <table class="table table-bordered">
                     <thead class="table-light">
                         <tr>
@@ -119,11 +120,11 @@
                         <?php endforeach; ?>
                     </tbody>
                 </table>
-                
+
                 <hr>
-                
+
                 <h5 class="mb-4">🧪 Azioni di Test</h5>
-                
+
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <a href="register.php" class="btn btn-primary btn-lg w-100">
@@ -136,11 +137,11 @@
                         </a>
                     </div>
                 </div>
-                
+
                 <hr>
-                
+
                 <h5 class="mb-4">📝 Istruzioni di Test</h5>
-                
+
                 <div class="alert alert-info">
                     <h6>Test Registrazione Istituto:</h6>
                     <ol>
@@ -162,7 +163,7 @@
                         <li>Se vedi "Registrazione Istituto completata!" → ✅ OK</li>
                     </ol>
                 </div>
-                
+
                 <div class="alert alert-info">
                     <h6>Test Registrazione Utente:</h6>
                     <ol>
@@ -181,7 +182,7 @@
                         <li>Se vedi "Registrazione Utente completata!" → ✅ OK</li>
                     </ol>
                 </div>
-                
+
                 <div class="alert alert-info">
                     <h6>Test Registrazione Partner:</h6>
                     <ol>
@@ -203,11 +204,11 @@
                         <li>Se vedi "Registrazione Partner completata!" → ✅ OK</li>
                     </ol>
                 </div>
-                
+
                 <hr>
-                
+
                 <h5 class="mb-4">🔍 Verifiche Post-Registrazione</h5>
-                
+
                 <div class="alert alert-success">
                     <p>Dopo la registrazione, i dati dovrebbero essere salvati nel database:</p>
                     <ul>
@@ -216,7 +217,7 @@
                         <li>✅ <strong>Partner</strong> → tabella <code>istituti_e_partner</code> con Tipologia = ARENA_VR/AZIENDA_FSL/etc.</li>
                     </ul>
                 </div>
-                
+
             </div>
             <div class="card-footer text-muted">
                 <small><i class="bi bi-clock"></i> Ultimo aggiornamento: <?= date('Y-m-d H:i:s') ?></small>

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'config.php';
 requireIstituto();
 
@@ -10,8 +10,8 @@ $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM attivita_eventi WHERE FK_En
 $stmt->execute([$istituto_id]);
 $total_attivita = $stmt->fetch()['total'];
 
-$stmt = $pdo->prepare("SELECT COUNT(*) as total FROM prenotazioni p 
-                       JOIN attivita_eventi a ON p.attivita_id = a.ID_Attivita 
+$stmt = $pdo->prepare("SELECT COUNT(*) as total FROM prenotazioni p
+                       JOIN attivita_eventi a ON p.attivita_id = a.ID_Attivita
                        WHERE a.FK_Ente_Organizzatore = ?");
 $stmt->execute([$istituto_id]);
 $total_prenotazioni = $stmt->fetch()['total'];
@@ -19,12 +19,12 @@ $total_prenotazioni = $stmt->fetch()['total'];
 // Ottieni attività recenti
 $stmt = $pdo->prepare("SELECT a.ID_Attivita as id, a.Titolo as titolo, a.Descrizione as descrizione, a.Data_Ora as data_ora,
                        a.Max_Posti as max_partecipanti, a.Stato as stato, a.created_at,
-                       COUNT(p.id) as prenotazioni_count 
-                       FROM attivita_eventi a 
+                       COALESCE(SUM(p.numero_partecipanti),0) as prenotazioni_count
+                       FROM attivita_eventi a
                        LEFT JOIN prenotazioni p ON a.ID_Attivita = p.attivita_id AND p.stato = 'confermata'
-                       WHERE a.FK_Ente_Organizzatore = ? 
-                       GROUP BY a.ID_Attivita 
-                       ORDER BY a.created_at DESC 
+                       WHERE a.FK_Ente_Organizzatore = ?
+                       GROUP BY a.ID_Attivita
+                       ORDER BY a.created_at DESC
                        LIMIT 5");
 $stmt->execute([$istituto_id]);
 $attivita_recenti = $stmt->fetchAll();
@@ -144,7 +144,7 @@ $t = $translations[$lang];
                                         <td><?= date('d/m/Y H:i', strtotime($attivita['data_ora'])) ?></td>
                                         <td>
                                             <span class="badge bg-<?= $attivita['stato'] === 'pubblicata' ? 'success' : ($attivita['stato'] === 'in_corso' ? 'warning' : 'secondary') ?>">
-                                                <?= ucfirst($attivita['stato']) ?>
+                                                <?= $attivita['stato'] === 'bozza' ? 'Da approvare' : ($attivita['stato'] === 'cancellata' ? 'Bloccata' : ucfirst($attivita['stato'])) ?>
                                             </span>
                                         </td>
                                         <td><?= $attivita['prenotazioni_count'] ?></td>
@@ -169,5 +169,3 @@ $t = $translations[$lang];
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
-

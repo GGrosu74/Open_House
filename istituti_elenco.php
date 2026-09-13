@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'config.php';
 
 $lang = $_GET['lang'] ?? 'it';
@@ -42,7 +42,7 @@ $query = "SELECT i.*, i.ID_Ente as id, i.Ragione_Sociale as nome, i.Tipologia as
                   INNER JOIN attivita_eventi a ON p.attivita_id = a.ID_Attivita
                   WHERE a.FK_Ente_Organizzatore = i.ID_Ente AND p.stato = 'confermata') as totale_prenotazioni
           FROM istituti_e_partner i
-          WHERE 1=1";
+          WHERE i.Stato_Validazione=1";
 
 $params = [];
 
@@ -75,9 +75,12 @@ if (!empty($search)) {
 
 $query .= " ORDER BY i.Ragione_Sociale ASC";
 
+$page=max(1,(int)($_GET['page']??1)); $pageSize=25; $offset=($page-1)*$pageSize;
+$query.=' LIMIT '.($pageSize+1).' OFFSET '.$offset;
 $stmt = $pdo->prepare($query);
 $stmt->execute($params);
 $istituti = $stmt->fetchAll();
+$hasMore=count($istituti)>$pageSize; if($hasMore) array_pop($istituti);
 
 // Ottieni regioni e province uniche per i filtri
 $stmt = $pdo->query("SELECT DISTINCT Regione FROM istituti_e_partner WHERE Regione IS NOT NULL AND Regione != '' ORDER BY Regione");
@@ -193,14 +196,14 @@ $tipologie_ente_map = [
                     <?php if ($solo === 'istituti'): ?>
                         <input type="hidden" name="solo" value="istituti">
                     <?php endif; ?>
-                    
+
                     <div class="col-md-12">
                         <label for="search" class="form-label"><?= $t['ricerca'] ?></label>
-                        <input type="text" class="form-control" id="search" name="search" 
-                               placeholder="<?= $t['placeholder_ricerca'] ?>" 
+                        <input type="text" class="form-control" id="search" name="search"
+                               placeholder="<?= $t['placeholder_ricerca'] ?>"
                                value="<?= htmlspecialchars($search) ?>">
                     </div>
-                    
+
                     <div class="col-md-4">
                         <label for="regione" class="form-label"><?= $t['regione'] ?></label>
                         <select class="form-select" id="regione" name="regione">
@@ -212,7 +215,7 @@ $tipologie_ente_map = [
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    
+
                     <div class="col-md-4">
                         <label for="provincia" class="form-label"><?= $t['provincia'] ?></label>
                         <select class="form-select" id="provincia" name="provincia">
@@ -224,7 +227,7 @@ $tipologie_ente_map = [
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    
+
                     <div class="col-md-4">
                         <label for="tipologia_ente" class="form-label"><?= $t['tipo_scuola'] ?></label>
                         <select class="form-select" id="tipologia_ente" name="tipologia_ente">
@@ -236,7 +239,7 @@ $tipologie_ente_map = [
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    
+
                     <div class="col-12">
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-search"></i> <?= $t['cerca'] ?>
@@ -264,32 +267,32 @@ $tipologie_ente_map = [
                             <div class="card-body">
                                 <h5 class="card-title"><?= htmlspecialchars($istituto['nome']) ?></h5>
                                 <p class="text-muted small mb-2">
-                                    <i class="bi bi-buildings"></i> 
+                                    <i class="bi bi-buildings"></i>
                                     <?= $tipologie_ente_map[$lang][$istituto['tipo_scuola']] ?? $istituto['tipo_scuola'] ?>
                                 </p>
-                                
+
                                 <?php if ($istituto['provincia']): ?>
                                     <p class="small mb-1">
-                                        <i class="bi bi-geo-alt"></i> 
+                                        <i class="bi bi-geo-alt"></i>
                                         <?= htmlspecialchars($istituto['provincia']) ?>
                                         <?php if ($istituto['regione']): ?>
                                             - <?= htmlspecialchars($istituto['regione']) ?>
                                         <?php endif; ?>
                                     </p>
                                 <?php endif; ?>
-                                
+
                                 <?php if ($istituto['indirizzo']): ?>
                                     <p class="small text-muted mb-2">
                                         <i class="bi bi-house"></i> <?= htmlspecialchars(substr($istituto['indirizzo'], 0, 50)) ?>...
                                     </p>
                                 <?php endif; ?>
-                                
+
                                 <?php if ($istituto['descrizione']): ?>
                                     <p class="card-text small">
                                         <?= htmlspecialchars(substr($istituto['descrizione'], 0, 100)) ?>...
                                     </p>
                                 <?php endif; ?>
-                                
+
                                 <div class="d-flex justify-content-between align-items-center mt-3">
                                     <div>
                                         <span class="badge bg-info">
@@ -300,9 +303,9 @@ $tipologie_ente_map = [
                                         </span>
                                     </div>
                                 </div>
-                                
+
                                 <div class="mt-3">
-                                    <a href="istituto_dettaglio.php?id=<?= $istituto['id'] ?>&lang=<?= $lang ?>" 
+                                    <a href="istituto_dettaglio.php?id=<?= $istituto['id'] ?>&lang=<?= $lang ?>"
                                        class="btn btn-sm btn-primary w-100">
                                         <i class="bi bi-eye"></i> <?= $t['dettagli'] ?>
                                     </a>
@@ -316,7 +319,6 @@ $tipologie_ente_map = [
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<?= paginationLinks($page??1,$hasMore??false) ?>
 </body>
 </html>
-
-

@@ -1,4 +1,6 @@
 <?php
+if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
+
 /**
  * Importa nel DB locale le attività demo da GitHub (script in repo).
  * Esegui: php tools/seed_attivita_github.php

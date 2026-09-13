@@ -1,10 +1,16 @@
+# Deny all private resources, before any other rewrite.
+RewriteEngine On
+RewriteRule "(^|/)(\.|database(?:/|$)|tools(?:/|$)|tests(?:/|$))" - [F,L]
+RewriteRule "\.(sql|bak|log|ini|env|md|docx?)(\.|$)" - [F,L,NC]
+RewriteRule "^(config|app_security)\.php$" - [F,L,NC]
+RewriteRule "^(test_|_test_|debug_|insert_demo|create_and_associate|associate_|migrate_|ripristina_|update_activity|process\.php)" - [F,L,NC]
 # Open Day Virtuale - Configurazione Apache
 
 # Forza HTTPS in produzione (InfinityFree / hosting con SSL). Su XAMPP localhost evitare redirect HTTPS.
 RewriteEngine On
 RewriteCond %{HTTPS} off
-RewriteCond %{HTTP_HOST} !^localhost$ [NC]
-RewriteCond %{HTTP_HOST} !^127\.0\.0\.1$ [NC]
+RewriteCond %{HTTP_HOST} !^localhost(?::[0-9]+)?$ [NC]
+RewriteCond %{HTTP_HOST} !^127\.0\.0\.1(?::[0-9]+)?$ [NC]
 RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
 # Protezione file sensibili

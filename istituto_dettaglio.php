@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'config.php';
 
 $lang = $_GET['lang'] ?? 'it';
@@ -41,7 +41,7 @@ if (!$istituto) {
 
 $stmt = $pdo->prepare("SELECT a.ID_Attivita as id, a.Titolo as titolo, a.Descrizione as descrizione, a.Data_Ora as data_ora,
                        a.Supporta_VR as supporta_vr, a.Max_Posti as max_partecipanti, a.Stato as stato,
-                       COUNT(p.id) as prenotazioni_count
+                       COALESCE(SUM(p.numero_partecipanti),0) as prenotazioni_count
                        FROM attivita_eventi a
                        LEFT JOIN prenotazioni p ON a.ID_Attivita = p.attivita_id AND p.stato = 'confermata'
                        WHERE a.FK_Ente_Organizzatore = ? AND a.Stato = 'pubblicata'

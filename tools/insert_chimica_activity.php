@@ -1,4 +1,6 @@
 <?php
+if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
+
 /**
  * Evento chimica (Molecular WebXR) — commit "evento chimica" su GitHub.
  * Il titolo contiene "chimic" così attivita_dettaglio.php usa molecularwebxr.org/app.

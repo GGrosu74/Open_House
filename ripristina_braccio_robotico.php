@@ -1,3 +1,4 @@
+<?php if (PHP_SAPI !== 'cli') { http_response_code(404); exit; } ?>
 <?php
 require_once 'config.php';
 
@@ -8,7 +9,7 @@ try {
     $titoloVecchio = 'Simulazione WebXR - Braccio robotico 3D';
     $titolo = 'Insect Robo';
     $descrizione = 'Laboratorio di robototecnica con simulazione WebXR di Insect Robo, un braccio robotico 3D ispirato agli insetti, pensato per utenti registrati del portale e per l\'orientamento tecnologico.';
-    $linkWebxr = 'https://sketchfab.com/3d-models/insect-mecha-a49db794b7a242feb85fa4ba427fa3bb';
+    $linkWebxr = 'simulazione_braccio_robotico.html?v=2';
     $dataOra = '2026-05-15 10:00:00';
 
     $stmt = $pdo->prepare("SELECT ID_Ente FROM istituti_e_partner WHERE Cod_Mecc = ? LIMIT 1");

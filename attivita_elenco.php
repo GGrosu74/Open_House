@@ -1,16 +1,17 @@
-﻿<?php
+<?php
 require_once 'config.php';
 
 $lang = $_GET['lang'] ?? 'it';
 $search = $_GET['search'] ?? '';
 $tipo = $_GET['tipo'] ?? '';
+$solo_fsl = ($_GET['fsl'] ?? '') === '1';
 
-$query = "SELECT a.ID_Attivita as id, a.Titolo as titolo, a.Descrizione as descrizione, a.Data_Ora as data_ora, 
+$query = "SELECT a.ID_Attivita as id, a.Titolo as titolo, a.Descrizione as descrizione, a.Data_Ora as data_ora,
           a.Supporta_VR as supporta_vr, a.Max_Posti as max_partecipanti, a.Tipo_Attivita as tipo_attivita,
           a.Link_WebXR as link_webxr, i.Ragione_Sociale as istituto_nome, i.Tipologia as tipo_scuola,
-          COUNT(p.id) as prenotazioni_count 
-          FROM attivita_eventi a 
-          LEFT JOIN istituti_e_partner i ON a.FK_Ente_Organizzatore = i.ID_Ente 
+          COALESCE(SUM(p.numero_partecipanti),0) as prenotazioni_count
+          FROM attivita_eventi a
+          LEFT JOIN istituti_e_partner i ON a.FK_Ente_Organizzatore = i.ID_Ente
           LEFT JOIN prenotazioni p ON a.ID_Attivita = p.attivita_id AND p.stato = 'confermata'
           WHERE a.Stato = 'pubblicata'";
 
@@ -25,6 +26,10 @@ if (!empty($search)) {
 if (!empty($tipo)) {
     $query .= " AND a.Tipo_Attivita = ?";
     $params[] = $tipo;
+}
+
+if ($solo_fsl) {
+    $query .= " AND a.Flag_FSL = 1";
 }
 
 $query .= " GROUP BY a.ID_Attivita ORDER BY a.Data_Ora ASC";
@@ -47,12 +52,13 @@ $attivita = $stmt->fetchAll();
     <?php include 'navbar.php'; ?>
 
     <div class="container mt-4 mb-5">
-        <h2 class="mb-4">Attività Disponibili</h2>
+        <h2 class="mb-4"><?= $solo_fsl ? 'Attività Formazione Scuola-Lavoro (FSL)' : ($tipo === 'open_day' ? 'Open House disponibili' : 'Attività Disponibili') ?></h2>
 
         <div class="card shadow mb-4">
             <div class="card-body">
                 <form method="GET" class="row g-3">
                     <input type="hidden" name="lang" value="<?= $lang ?>">
+                    <?php if ($solo_fsl): ?><input type="hidden" name="fsl" value="1"><?php endif; ?>
                     <div class="col-md-6">
                         <input type="text" class="form-control" name="search" placeholder="Cerca..." value="<?= htmlspecialchars($search) ?>">
                     </div>
@@ -62,6 +68,7 @@ $attivita = $stmt->fetchAll();
                             <option value="presentazione" <?= $tipo === 'presentazione' ? 'selected' : '' ?>>Presentazione</option>
                             <option value="laboratorio" <?= $tipo === 'laboratorio' ? 'selected' : '' ?>>Laboratorio</option>
                             <option value="tour_virtuale" <?= $tipo === 'tour_virtuale' ? 'selected' : '' ?>>Tour Virtuale</option>
+                            <option value="open_day" <?= $tipo === 'open_day' ? 'selected' : '' ?>>Open House</option>
                             <option value="workshop" <?= $tipo === 'workshop' ? 'selected' : '' ?>>Workshop</option>
                         </select>
                     </div>

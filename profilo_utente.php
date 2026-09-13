@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $tipo_utente = $_POST['tipo_utente'] ?? '';
     $data_nascita = $_POST['data_nascita'] ?? '';
     $telefono = sanitize($_POST['telefono'] ?? '');
-    
+
     if (empty($nome) || empty($cognome) || empty($tipo_utente)) {
         $error = 'Compila tutti i campi obbligatori';
     } else {
@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = $e->getMessage();
         }
     }
-    
+
     // Ricarica dati
     if (empty($error)) {
         $userTable = getUserTable($pdo);
@@ -94,12 +94,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php if ($error): ?>
                             <div class="alert alert-danger"><?= $error ?></div>
                         <?php endif; ?>
-                        
+
                         <?php if ($success): ?>
                             <div class="alert alert-success"><?= $success ?></div>
                         <?php endif; ?>
-                        
+
                         <form method="POST">
+<?= csrfField() ?>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="nome" class="form-label">Nome *</label>
@@ -110,13 +111,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <input type="text" class="form-control" id="cognome" name="cognome" value="<?= htmlspecialchars($utente['cognome']) ?>" required>
                                 </div>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="email" class="form-label">Email</label>
                                 <input type="email" class="form-control" id="email" value="<?= htmlspecialchars($utente['email']) ?>" disabled>
                                 <small class="form-text text-muted">L'email non può essere modificata</small>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="tipo_utente" class="form-label">Tipo Utente *</label>
                                 <select class="form-select" id="tipo_utente" name="tipo_utente" required>
@@ -125,17 +126,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <option value="docente" <?= $utente['tipo_utente'] === 'docente' ? 'selected' : '' ?>>Docente</option>
                                 </select>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="data_nascita" class="form-label">Data di Nascita</label>
                                 <input type="date" class="form-control" id="data_nascita" name="data_nascita" value="<?= $utente['data_nascita'] ?>">
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="telefono" class="form-label">Telefono</label>
                                 <input type="tel" class="form-control" id="telefono" name="telefono" value="<?= htmlspecialchars($utente['telefono']) ?>">
                             </div>
-                            
+
                             <button type="submit" class="btn btn-primary">Salva Modifiche</button>
                             <a href="dashboard_utente.php?lang=<?= $lang ?>" class="btn btn-secondary">Annulla</a>
                         </form>

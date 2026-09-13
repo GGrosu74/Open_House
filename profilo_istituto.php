@@ -20,13 +20,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $provincia = sanitize($_POST['provincia'] ?? '');
     $telefono = sanitize($_POST['telefono'] ?? '');
     $descrizione = sanitize($_POST['descrizione'] ?? '');
-    
+
     if (empty($nome) || empty($tipo_scuola)) {
         $error = 'Compila tutti i campi obbligatori';
     } else {
         try {
-            $stmt = $pdo->prepare("UPDATE istituti_e_partner SET Ragione_Sociale = ?, Tipologia = ?, indirizzo = ?, regione = ?, provincia = ? WHERE ID_Ente = ?");
-            $stmt->execute([$nome, $tipo_scuola, $indirizzo, $regione ?: null, $provincia ?: null, $istituto_id]);
+            $stmt = $pdo->prepare("UPDATE istituti_e_partner SET Ragione_Sociale = ?, indirizzo = ?, regione = ?, provincia = ? WHERE ID_Ente = ?");
+            $stmt->execute([$nome, $indirizzo, $regione ?: null, $provincia ?: null, $istituto_id]);
             $success = 'Profilo aggiornato con successo!';
             $_SESSION['user_name'] = $nome;
             header('Location: profilo_istituto.php?lang=' . $lang);
@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Errore durante l\'aggiornamento';
         }
     }
-    
+
     // Ricarica dati
     $stmt = $pdo->prepare("SELECT *, ID_Ente as id, Ragione_Sociale as nome, Tipologia as tipo_scuola, Cod_Mecc as codice_istituto FROM istituti_e_partner WHERE ID_Ente = ?");
     $stmt->execute([$istituto_id]);
@@ -66,23 +66,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php if ($error): ?>
                             <div class="alert alert-danger"><?= $error ?></div>
                         <?php endif; ?>
-                        
+
                         <?php if ($success): ?>
                             <div class="alert alert-success"><?= $success ?></div>
                         <?php endif; ?>
-                        
+
                         <form method="POST">
+<?= csrfField() ?>
                             <div class="mb-3">
                                 <label for="nome" class="form-label">Nome Istituto *</label>
                                 <input type="text" class="form-control" id="nome" name="nome" value="<?= htmlspecialchars($istituto['nome']) ?>" required>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="email" class="form-label">Email</label>
                                 <input type="email" class="form-control" id="email" value="<?= htmlspecialchars($istituto['email']) ?>" disabled>
                                 <small class="form-text text-muted">L'email non può essere modificata</small>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="tipo_scuola" class="form-label">Tipo Scuola *</label>
                                 <select class="form-select" id="tipo_scuola" name="tipo_scuola" required>
@@ -93,37 +94,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <option value="universita" <?= $istituto['tipo_scuola'] === 'universita' ? 'selected' : '' ?>>Università</option>
                                 </select>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="indirizzo" class="form-label">Indirizzo</label>
                                 <textarea class="form-control" id="indirizzo" name="indirizzo" rows="2"><?= htmlspecialchars($istituto['indirizzo'] ?? '') ?></textarea>
                             </div>
-                            
+
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="provincia" class="form-label">Provincia</label>
-                                    <input type="text" class="form-control" id="provincia" name="provincia" 
-                                           value="<?= htmlspecialchars($istituto['provincia'] ?? '') ?>" 
+                                    <input type="text" class="form-control" id="provincia" name="provincia"
+                                           value="<?= htmlspecialchars($istituto['provincia'] ?? '') ?>"
                                            placeholder="Es. Milano">
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label for="regione" class="form-label">Regione</label>
-                                    <input type="text" class="form-control" id="regione" name="regione" 
-                                           value="<?= htmlspecialchars($istituto['regione'] ?? '') ?>" 
+                                    <input type="text" class="form-control" id="regione" name="regione"
+                                           value="<?= htmlspecialchars($istituto['regione'] ?? '') ?>"
                                            placeholder="Es. Lombardia">
                                 </div>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="telefono" class="form-label">Telefono</label>
                                 <input type="tel" class="form-control" id="telefono" name="telefono" value="<?= htmlspecialchars($istituto['telefono'] ?? '') ?>">
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="descrizione" class="form-label">Descrizione</label>
                                 <textarea class="form-control" id="descrizione" name="descrizione" rows="5"><?= htmlspecialchars($istituto['descrizione'] ?? '') ?></textarea>
                             </div>
-                            
+
                             <button type="submit" class="btn btn-primary">Salva Modifiche</button>
                             <a href="dashboard_istituto.php?lang=<?= $lang ?>" class="btn btn-secondary">Annulla</a>
                         </form>

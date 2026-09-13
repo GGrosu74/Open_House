@@ -13,24 +13,28 @@ $total_utenti_registrati = 0;
 
 try {
     // Tutte le attivita pubblicate (passate e future)
-    $stmt = $pdo->prepare("SELECT a.ID_Attivita as id, a.Titolo as titolo, a.Descrizione as descrizione, 
+    $stmt = $pdo->prepare("SELECT a.ID_Attivita as id, a.Titolo as titolo, a.Descrizione as descrizione,
                            a.Data_Ora as data_ora, a.Supporta_VR as supporta_vr, a.Max_Posti as max_partecipanti,
                            i.Ragione_Sociale as istituto_nome, i.Tipologia as tipo_scuola,
-                           COUNT(p.id) as prenotazioni_count 
-                           FROM attivita_eventi a 
-                           JOIN istituti_e_partner i ON a.FK_Ente_Organizzatore = i.ID_Ente 
+                           COALESCE(SUM(p.numero_partecipanti),0) as prenotazioni_count
+                           FROM attivita_eventi a
+                           JOIN istituti_e_partner i ON a.FK_Ente_Organizzatore = i.ID_Ente
                            LEFT JOIN prenotazioni p ON a.ID_Attivita = p.attivita_id AND p.stato = 'confermata'
-                           WHERE a.Stato = 'pubblicata'
-                           GROUP BY a.ID_Attivita 
+                           WHERE a.Stato = 'pubblicata' AND a.Data_Ora > NOW()
+                           GROUP BY a.ID_Attivita
                            ORDER BY a.Data_Ora ASC");
     $stmt->execute();
     $attivita_featured = $stmt->fetchAll();
 
-    // Conta statistiche separando istituti e partner in base ai codici dedicati
-    $stmt = $pdo->query("SELECT COUNT(*) as total FROM istituti_e_partner WHERE Cod_Mecc IS NOT NULL AND Cod_Mecc != ''");
+    // Usa gli stessi criteri delle pagine pubbliche: mostra solo enti approvati.
+    $stmt = $pdo->query("SELECT COUNT(*) as total FROM istituti_e_partner WHERE Stato_Validazione = 1 AND Cod_Mecc IS NOT NULL AND Cod_Mecc != ''");
     $total_istituti = (int)($stmt->fetch()['total'] ?? 0);
 
-    $stmt = $pdo->query("SELECT COUNT(*) as total FROM istituti_e_partner WHERE Cod_REA IS NOT NULL AND Cod_REA != ''");
+    $stmt = $pdo->query("SELECT COUNT(*) as total FROM istituti_e_partner
+                         WHERE Stato_Validazione = 1
+                           AND (Tipologia IN ('ARENA_VR', 'ARENA_MOBILE', 'PARTNER_VR')
+                                OR Tipologia LIKE '%AZIENDA%'
+                                OR (Tipologia LIKE '%PARTNER%' AND Tipologia <> 'PARTNER_VR'))");
     $total_partner = (int)($stmt->fetch()['total'] ?? 0);
 
     $total_enti = $total_istituti + $total_partner;
@@ -86,20 +90,20 @@ $translations = [
         'attori' => 'Attori Principali',
         'casi_uso' => 'Esperienze',
         'rnf' => 'Requisiti qualitativi',
-        'always_on' => 'Disponibile 24/7',
+        'always_on' => 'Accesso online',
         'gdpr' => 'GDPR',
         'compatibilita' => 'Compatibile WebXR',
         'inclusivo' => 'Inclusivo e geolocalizzato',
         'responsive' => 'Responsive',
-        'high_availability' => 'High Availability',
-        'view_activities_hint' => 'Per partecipare o visualizzare, clicca su una delle attivita dalla lista.',
+        'high_availability' => 'Esperienze immersive',
+        'view_activities_hint' => 'Ogni pulsante apre il percorso o la risorsa indicata.',
         'open_day_virtuali' => 'Open House',
         'orientamento_uscita' => 'Orientamento in Uscita',
         'fsl_formazione' => 'Formazione Scuola-Lavoro FSL',
         'corsi_certificazioni' => 'Corsi e Certificazioni',
         'storico_fsl' => 'Storico personale e materiali FSL',
         'cta_join' => 'Unisciti alla piattaforma',
-        'footer' => '� 2025 Open House. Tutti i diritti riservati.',
+        'footer' => '&copy; 2026 Open House. Tutti i diritti riservati.',
         'utenti_finali' => 'Utenti Finali',
         'partner' => 'Partner'
     ],
@@ -135,15 +139,15 @@ $translations = [
         'compatibilita' => 'WebXR compatible',
         'inclusivo' => 'Inclusive and geolocated',
         'responsive' => 'Responsive',
-        'high_availability' => 'High Availability',
-        'view_activities_hint' => 'To participate or view details, click one activity from the list.',
+        'high_availability' => 'Esperienze immersive',
+        'view_activities_hint' => 'Each button opens the indicated pathway or resource.',
         'open_day_virtuali' => 'Open Houses',
         'orientamento_uscita' => 'Career Orientation',
         'fsl_formazione' => 'School-to-Work FSL Training',
         'corsi_certificazioni' => 'Courses and Certifications',
         'storico_fsl' => 'Personal history and FSL materials',
         'cta_join' => 'Join the platform',
-        'footer' => '� 2025 Open House. All rights reserved.',
+        'footer' => '&copy; 2026 Open House. All rights reserved.',
         'utenti_finali' => 'End Users',
         'partner' => 'Partners'
     ]
@@ -250,7 +254,7 @@ $t = $translations[$lang];
     </section>
 
     <!-- Ecosystem Section -->
-    <section class="py-5 bg-light">
+    <section class="py-5 bg-light" id="ecosistema">
         <div class="container">
             <h2 class="text-center mb-2"><?= $t['ecosistema'] ?></h2>
             <p class="text-center text-muted mb-5"><?= $t['ecosistema_subtitle'] ?></p>
@@ -272,11 +276,11 @@ $t = $translations[$lang];
                         <div class="card-body">
                             <h5 class="card-title"><i class="bi bi-list-check"></i> <?= $t['casi_uso'] ?></h5>
                             <div class="d-grid gap-2 mb-3">
-                                <a href="attivita_elenco.php?lang=<?= $lang ?>&focus=open-day-virtuali" class="btn btn-outline-success text-start">1. <?= $t['open_day_virtuali'] ?></a>
-                                <a href="attivita_elenco.php?lang=<?= $lang ?>&focus=orientamento-uscita" class="btn btn-outline-success text-start">2. <?= $t['orientamento_uscita'] ?></a>
-                                <a href="attivita_elenco.php?lang=<?= $lang ?>&focus=fsl" class="btn btn-outline-success text-start">3. <?= $t['fsl_formazione'] ?></a>
-                                <a href="attivita_elenco.php?lang=<?= $lang ?>&focus=corsi-certificazioni" class="btn btn-outline-success text-start">4. <?= $t['corsi_certificazioni'] ?></a>
-                                <a href="attivita_elenco.php?lang=<?= $lang ?>&focus=storico-fsl" class="btn btn-outline-success text-start">5. <?= $t['storico_fsl'] ?></a>
+                                <a href="attivita_elenco.php?lang=<?= $lang ?>&tipo=open_day" class="btn btn-outline-success text-start">1. <?= $t['open_day_virtuali'] ?></a>
+                                <a href="partner_istituti.php?lang=<?= $lang ?>&view=partner_fsl" class="btn btn-outline-success text-start">2. <?= $t['orientamento_uscita'] ?></a>
+                                <a href="attivita_elenco.php?lang=<?= $lang ?>&fsl=1" class="btn btn-outline-success text-start">3. <?= $t['fsl_formazione'] ?></a>
+                                <a href="corsi_certificazioni.php?lang=<?= $lang ?>" class="btn btn-outline-success text-start">4. <?= $t['corsi_certificazioni'] ?></a>
+                                <a href="dashboard.php?lang=<?= $lang ?>#storico-fsl" class="btn btn-outline-success text-start">5. <?= $t['storico_fsl'] ?></a>
                             </div>
                             <small class="text-muted"><?= $t['view_activities_hint'] ?></small>
                         </div>
@@ -360,6 +364,3 @@ $t = $translations[$lang];
     </script>
 </body>
 </html>
-
-
-

@@ -1,3 +1,4 @@
+<?php if (PHP_SAPI !== 'cli') { http_response_code(404); exit; } ?>
 <?php
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo "Accesso diretto non consentito. Compila la form dalla pagina principale.";

@@ -1,75 +1,29 @@
 <?php
-/**
- * Configurazione Open Day Virtuale Platform
- * 
- * PER INFINITYFREE:
- * 1. Modifica DB_HOST, DB_NAME, DB_USER, DB_PASS con le credenziali del tuo hosting
- * 2. Modifica BASE_URL con il tuo dominio
- * 3. Genera una SECRET_KEY sicura
- */
-
-// Configurazione database
-// ⚠️ MODIFICA QUESTI VALORI CON LE CREDENZIALI DEL TUO HOSTING
-define('DB_HOST', '127.0.0.1');  // In locale XAMPP usa TCP esplicito
-define('DB_PORT', '3306');  // Porta MySQL locale
-define('DB_NAME', 'open_house');  // Nome database MySQL/MariaDB in XAMPP (phpMyAdmin)
-define('DB_USER', 'root');  // Utente MySQL locale di default
-define('DB_PASS', '');  // Password vuota di default in XAMPP
-
-// Credenziali InfinityFree (da riattivare quando pubblichi)
-// define('DB_HOST', 'sqlXXX.infinityfree.com');  // Oppure 'localhost' se indicato dal tuo hosting
-// define('DB_NAME', 'if0_40204014_vr_client');  // Nome COMPLETO con prefisso
-// define('DB_USER', 'if0_40204014');  // Nome COMPLETO con prefisso (es. if0_40204014_dbuser)
-// define('DB_PASS', '2jXH8Vrxru8ww');
-
-// Configurazione sicurezza
-// ⚠️ GENERA UNA CHIAVE SICURA: https://randomkeygen.com/
-define('SECRET_KEY', 'n-k(VH=O:><6PT=q');
-define('SESSION_LIFETIME', 43200); // 12 ore
-
-// Configurazione percorso
-// ⚠️ MODIFICA CON IL TUO DOMINIO
-// XAMPP default: cartella sotto htdocs (Apache porta 80). Se usi un altro host/porta, aggiorna qui.
-define('BASE_URL', 'http://localhost/Open_House');
-// In produzione imposta il dominio pubblico, es: 'https://ticreators.great-site.net'
-
-// Timezone
+// Supply OPENHOUSE_* environment variables on the server; never commit secrets.
+define('DB_HOST', getenv('OPENHOUSE_DB_HOST') ?: '127.0.0.1');
+define('DB_PORT', getenv('OPENHOUSE_DB_PORT') ?: '3306');
+define('DB_NAME', getenv('OPENHOUSE_DB_NAME') ?: 'open_house');
+define('DB_USER', getenv('OPENHOUSE_DB_USER') ?: 'root');
+define('DB_PASS', getenv('OPENHOUSE_DB_PASS') ?: '');
+define('BASE_URL', rtrim(getenv('OPENHOUSE_BASE_URL') ?: 'http://localhost/Open_House', '/'));
+define('DEBUG_MODE', getenv('OPENHOUSE_DEBUG') === '1');
+define('SESSION_LIFETIME', 43200);
 date_default_timezone_set('Europe/Rome');
-
-// Modalità debug (disabilita in produzione)
-define('DEBUG_MODE', true); // In locale: true per vedere errore reale di connessione
-
-// Connessione database
-try {
-    $pdo = new PDO(
-        "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=utf8mb4",
-        DB_USER,
-        DB_PASS
-    );
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-} catch(PDOException $e) {
-    if (defined('DEBUG_MODE') && DEBUG_MODE) {
-        die("Errore connessione database: " . $e->getMessage());
-    } else {
-        // In produzione, mostra messaggio generico
-        die("Errore connessione database. Verifica le credenziali in config.php");
-    }
-}
-
-// Avvia sessione
-if (session_status() === PHP_SESSION_NONE) {
-    ini_set('session.gc_maxlifetime', (string) SESSION_LIFETIME);
-    session_set_cookie_params([
-        'lifetime' => SESSION_LIFETIME,
-        'path' => '/',
-        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
-        'httponly' => true,
-        'samesite' => 'Lax'
-    ]);
+ini_set('display_errors','0'); ini_set('log_errors','1');
+set_exception_handler(function(Throwable $error) {
+    error_log((string)$error);
+    if (PHP_SAPI === 'cli') { fwrite(STDERR, "Operazione fallita. Consultare il log.\n"); exit(1); }
+    http_response_code(500); echo 'Errore di sistema. Riprova più tardi.';
+});
+$pdo=new PDO("mysql:host=".DB_HOST.";port=".DB_PORT.";dbname=".DB_NAME.";charset=utf8mb4",DB_USER,DB_PASS,[
+    PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC,PDO::ATTR_EMULATE_PREPARES=>false]);
+if(PHP_SAPI !== 'cli' && session_status()===PHP_SESSION_NONE) {
+    ini_set('session.use_strict_mode','1'); ini_set('session.gc_maxlifetime',(string)SESSION_LIFETIME);
+    session_set_cookie_params(['lifetime'=>SESSION_LIFETIME,'path'=>'/',
+        'secure'=>!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS']!=='off','httponly'=>true,'samesite'=>'Lax']);
     session_start();
 }
-
+require_once __DIR__.'/app_security.php';
 // Funzioni di utilità
 function isLoggedIn() {
     return isset($_SESSION['user_id']) && isset($_SESSION['user_type']);
@@ -104,6 +58,10 @@ function requirePartner() {
 
 function requireAdmin() {
     requireRole(['admin']);
+    if (!empty($_SESSION['must_change_password']) && basename($_SERVER['SCRIPT_NAME'] ?? '') !== 'admin_password.php') {
+        header('Location: admin_password.php');
+        exit;
+    }
 }
 
 function sanitize($data) {
@@ -119,20 +77,15 @@ function verifyPassword($password, $hash) {
 }
 
 function sendHtmlEmail($to, $subject, $htmlBody) {
-    if (empty($to)) {
-        return false;
+    if (!filter_var($to,FILTER_VALIDATE_EMAIL) || preg_match('/[\r\n]/',$to.$subject)) return false;
+    $transport=getenv('OPENHOUSE_MAIL_TRANSPORT') ?: 'disabled';
+    if($transport==='log' && getenv('OPENHOUSE_MAIL_LOG')) {
+        return file_put_contents(getenv('OPENHOUSE_MAIL_LOG'),json_encode(['to'=>$to,'subject'=>$subject,'body'=>$htmlBody],JSON_UNESCAPED_UNICODE)."\n",FILE_APPEND|LOCK_EX)!==false;
     }
-
-    $host = parse_url(BASE_URL, PHP_URL_HOST) ?: 'localhost';
-    $fromAddress = 'no-reply@' . $host;
-
-    $headers = [];
-    $headers[] = 'MIME-Version: 1.0';
-    $headers[] = 'Content-type: text/html; charset=UTF-8';
-    $headers[] = 'From: Open House <' . $fromAddress . '>';
-    $headers[] = 'Reply-To: ' . $fromAddress;
-
-    return @mail($to, $subject, $htmlBody, implode("\r\n", $headers));
+    if($transport!=='mail') return false;
+    $from=getenv('OPENHOUSE_MAIL_FROM');
+    if(!$from || !filter_var($from,FILTER_VALIDATE_EMAIL)) return false;
+    return mail($to,$subject,$htmlBody,['MIME-Version'=>'1.0','Content-type'=>'text/html; charset=UTF-8','From'=>$from]);
 }
 
 function tableHasColumn(PDO $pdo, string $tableName, string $columnName): bool {
@@ -225,4 +178,4 @@ function normalizeAttivitaRow(array $row): array {
         'stato' => $row['Stato'] ?? $row['stato'] ?? 'bozza',
     ];
 }
-?>
+initializeSecurity($pdo);

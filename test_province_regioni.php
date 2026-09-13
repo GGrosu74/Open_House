@@ -1,3 +1,4 @@
+<?php if (PHP_SAPI !== 'cli') { http_response_code(404); exit; } ?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -24,7 +25,7 @@
                 <h4 class="mb-0"><i class="bi bi-gear"></i> Test Province e Regioni</h4>
             </div>
             <div class="card-body">
-                
+
                 <!-- Test 1: Dropdown Regioni -->
                 <div class="mb-4">
                     <h5><i class="bi bi-map"></i> Test 1: Dropdown Regioni e Province</h5>
@@ -51,7 +52,7 @@
                 <!-- Test 2: API Test -->
                 <div class="mb-4">
                     <h5><i class="bi bi-cloud-check"></i> Test 2: API Endpoints</h5>
-                    
+
                     <div class="api-test">
                         <button class="btn btn-sm btn-info" onclick="testAPIRegioni()">
                             <i class="bi bi-play-circle"></i> Test: GET /api_regioni_province.php?action=regioni
@@ -116,7 +117,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="province_regioni.js"></script>
-    
+
     <script>
         // Utility per logging
         function log(message, type = 'info') {
@@ -138,7 +139,7 @@
         function updateProvince() {
             const regione = document.getElementById('testRegione').value;
             document.getElementById('resultRegione').textContent = regione || '-';
-            
+
             populateProvince('testRegione', 'testProvincia');
             log(`Regione selezionata: ${regione}`, 'info');
         }
@@ -212,19 +213,19 @@
         // Test 3: Dati locali
         function testDatiLocali() {
             log('Analizzando dati da province_regioni.js...', 'info');
-            
+
             const totalRegioni = REGIONI_ARRAY.length;
             const totalProvince = Object.values(REGIONI_PROVINCE).reduce((a, b) => a + b.length, 0);
-            
+
             document.getElementById('totalRegioni').textContent = totalRegioni;
             document.getElementById('totalProvince').textContent = totalProvince;
-            
+
             let html = '<table class="table table-sm"><thead><tr><th>Regione</th><th>Province</th></tr></thead><tbody>';
             Object.entries(REGIONI_PROVINCE).forEach(([regione, province]) => {
                 html += `<tr><td>${regione}</td><td>${province.length}</td></tr>`;
             });
             html += '</tbody></table>';
-            
+
             document.getElementById('dettagliDati').innerHTML = html;
             log(`Dati locali: ${totalRegioni} regioni, ${totalProvince} province totali`, 'success');
         }
@@ -232,11 +233,11 @@
         // Inizializzazione
         document.addEventListener('DOMContentLoaded', function() {
             log('Page loaded - Initializing tests...', 'info');
-            
+
             // Popola i dropdown di test
             populateRegioni('testRegione');
             log('Test dropdown regioni inizializzato', 'success');
-            
+
             // Mostra statistiche
             testDatiLocali();
         });

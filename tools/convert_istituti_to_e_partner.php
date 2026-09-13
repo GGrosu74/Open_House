@@ -1,4 +1,6 @@
 <?php
+if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
+
 $in = __DIR__ . '/../database/database.sql';
 $out = __DIR__ . '/../database/istituti_to_istituti_e_partner.sql';
 $raw = file_get_contents($in);

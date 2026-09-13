@@ -1,3 +1,4 @@
+<?php if (PHP_SAPI !== 'cli') { http_response_code(404); exit; } ?>
 <?php
 require_once 'config.php';
 $newLink = 'https://store.steampowered.com/app/754010/Medicalholodeck_Spatial_OS_obuchat_xirurgii_sozdavat_czifrovye_dvojniki_s_pomoshhyu_II_i_DICOM_i_izuchat_anatomiyu_cheloveka/';

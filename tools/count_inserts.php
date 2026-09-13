@@ -1,4 +1,6 @@
 <?php
+if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
+
 $path = __DIR__ . '/../database/database.sql';
 $raw = file_get_contents($path);
 function countTuples($raw, $table) {

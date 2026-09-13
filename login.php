@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'config.php';
 
 $error = '';
@@ -41,7 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
     $user_type = $_POST['user_type'] ?? '';
 
-    if (empty($email) || empty($password) || empty($user_type)) {
+    if (!loginRateAllowed()) {
+        $error='Troppi tentativi. Riprova tra 15 minuti.';
+    } elseif (empty($email) || empty($password) || empty($user_type)) {
         $error = 'Compila tutti i campi';
     } else {
         try {
@@ -49,11 +51,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Default: utenti table (local users)
             if ($user_type === 'utente') {
-                $stmt = $pdo->prepare('SELECT id, nome, cognome, email, password FROM utenti WHERE email = ? LIMIT 1');
+                $userTable=getUserTable($pdo);
+                $stmt=$pdo->prepare("SELECT id,nome,cognome,email,password FROM $userTable WHERE email=? LIMIT 1");
                 $stmt->execute([$email]);
                 $user = $stmt->fetch();
 
                 if ($user && verifyPassword($password, $user['password'])) {
+                    session_regenerate_id(true);
+                    $_SESSION['user_email']=$user['email'];
                     $_SESSION['user_id'] = $user['id'];
                     $_SESSION['user_type'] = 'utente';
                     $_SESSION['user_name'] = trim(($user['nome'] ?? '') . ' ' . ($user['cognome'] ?? '')) ?: $user['email'];
@@ -85,16 +90,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $stmt->execute([$email]);
                         $row = $stmt->fetch();
 
-                        if ($row && verifyPassword($password, $row['password'])) {
+                        if ($row && verifyPassword($password, $row['password']) && ($user_type==='admin' || ((int)($row['Stato_Validazione']??0)===1 && enteRole($row)===$user_type))) {
+                            session_regenerate_id(true);
+                            $_SESSION['user_email']=$row['email']??$row['Email']??'';
                             $_SESSION['user_id'] = $row['ID_Ente'] ?? $row['id'] ?? $row['ID'] ?? 0;
                             $_SESSION['user_type'] = $user_type;
                             $_SESSION['user_name'] = $row['Ragione_Sociale'] ?? $row['nome'] ?? $row['email'] ?? $email;
+                            if ($user_type === 'admin') {
+                                $_SESSION['must_change_password'] = (int)($row['must_change_password'] ?? 0);
+                            }
 
                             // Redirect by role
                             if ($user_type === 'istituto') {
                                 header('Location: dashboard_istituto.php');
                             } elseif ($user_type === 'partner') {
                                 header('Location: dashboard_partner.php');
+                            } elseif (!empty($_SESSION['must_change_password'])) {
+                                header('Location: admin_password.php');
                             } else {
                                 header('Location: dashboard_admin.php');
                             }
@@ -111,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } catch (PDOException $e) {
             if (defined('DEBUG_MODE') && DEBUG_MODE) {
-                $error = 'Errore database: ' . $e->getMessage();
+                $error = 'Errore database: ';
             } else {
                 $error = 'Errore di sistema. Riprovare più tardi.';
             }
@@ -139,12 +151,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="card shadow">
                     <div class="card-body p-4">
                         <h2 class="card-title text-center mb-4"><?= htmlspecialchars($t['login']) ?></h2>
-                        
+
                         <?php if ($error): ?>
                             <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
                         <?php endif; ?>
-                        
+
                         <form method="POST">
+<?= csrfField() ?>
                             <div class="mb-3">
                                 <label for="user_type" class="form-label"><?= htmlspecialchars($t['user_type']) ?></label>
                                 <select class="form-select" id="user_type" name="user_type" required>
@@ -155,20 +168,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <option value="admin"><?= htmlspecialchars($t['admin']) ?></option>
                                 </select>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="email" class="form-label"><?= htmlspecialchars($t['email']) ?></label>
                                 <input type="email" class="form-control" id="email" name="email" required>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="password" class="form-label"><?= htmlspecialchars($t['password']) ?></label>
                                 <input type="password" class="form-control" id="password" name="password" required>
                             </div>
-                            
+
                             <button type="submit" class="btn btn-primary w-100 mb-3"><?= htmlspecialchars($t['login']) ?></button>
                         </form>
-                        
+
                         <div class="text-center">
                             <p class="mb-2"><?= $t['no_account'] ?></p>
                             <a href="register.php?lang=<?= $lang ?>" class="btn btn-outline-primary w-100"><?= $t['register'] ?></a>
@@ -182,5 +195,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
-

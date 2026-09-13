@@ -1,3 +1,4 @@
+<?php if (PHP_SAPI !== 'cli') { http_response_code(404); exit; } ?>
 <?php
 require_once 'config.php';
 
@@ -8,7 +9,7 @@ echo "<h3>Tutti i partner nel database:</h3>";
 try {
     $stmt = $pdo->query("SELECT ID_Ente, Ragione_Sociale, Tipologia, Cod_REA, Stato_Validazione FROM istituti_e_partner WHERE Tipologia IN ('AZIENDA', 'ARENA_VR', 'PARTNER_VR') ORDER BY ID_Ente DESC LIMIT 20");
     $partners = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     if (empty($partners)) {
         echo "❌ Nessun partner trovato nel database<br>";
     } else {

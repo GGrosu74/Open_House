@@ -1,18 +1,18 @@
-﻿<?php
+<?php
 require_once 'config.php';
 
 $lang = $_GET['lang'] ?? 'it';
 $attivita_id = $_GET['id'] ?? 0;
 
-$stmt = $pdo->prepare("SELECT a.ID_Attivita as id, a.Titolo as titolo, a.Descrizione as descrizione, a.Data_Ora as data_ora,
+$stmt = $pdo->prepare("SELECT a.ID_Attivita as id, a.FK_Ente_Organizzatore as organizzatore_id, a.Titolo as titolo, a.Descrizione as descrizione, a.Data_Ora as data_ora,
                        a.Durata_Minuti as durata_minuti, a.Supporta_VR as supporta_vr, a.Max_Posti as max_partecipanti, a.Tipo_Attivita as tipo_attivita,
-                       a.Link_WebXR as link_webxr, a.Materiali_URL as materiali, a.Stato as stato, 
+                       a.Link_WebXR as link_webxr, a.Materiali_URL as materiali, a.Stato as stato,
                        i.Ragione_Sociale as istituto_nome, i.Email as istituto_email,
-                       COUNT(p.id) as prenotazioni_count 
-                       FROM attivita_eventi a 
-                       JOIN istituti_e_partner i ON a.FK_Ente_Organizzatore = i.ID_Ente 
+                       COALESCE(SUM(p.numero_partecipanti),0) as prenotazioni_count
+                       FROM attivita_eventi a
+                       JOIN istituti_e_partner i ON a.FK_Ente_Organizzatore = i.ID_Ente
                        LEFT JOIN prenotazioni p ON a.ID_Attivita = p.attivita_id AND p.stato = 'confermata'
-                       WHERE a.ID_Attivita = ? 
+                       WHERE a.ID_Attivita = ?
                        GROUP BY a.ID_Attivita");
 $stmt->execute([$attivita_id]);
 $attivita = $stmt->fetch();
@@ -20,6 +20,18 @@ $attivita = $stmt->fetch();
 if (!$attivita) {
     header('Location: index.php');
     exit;
+}
+
+if ($attivita['stato'] !== 'pubblicata') {
+    $canPreview = isLoggedIn() && (
+        $_SESSION['user_type'] === 'admin'
+        || (in_array($_SESSION['user_type'], ['istituto', 'partner'], true)
+            && (int)$_SESSION['user_id'] === (int)$attivita['organizzatore_id'])
+    );
+    if (!$canPreview) {
+        http_response_code(404);
+        exit('Evento non disponibile.');
+    }
 }
 
 $flash_success = $_SESSION['success'] ?? '';
@@ -42,6 +54,7 @@ if (isLoggedIn()) {
 }
 
 $posti_disponibili = $attivita['max_partecipanti'] - $attivita['prenotazioni_count'];
+$video_embed_url = !empty($attivita['materiali']) ? youtubeEmbedUrl($attivita['materiali']) : null;
 ?>
 <!DOCTYPE html>
 <html lang="<?= $lang ?>">
@@ -82,7 +95,7 @@ $posti_disponibili = $attivita['max_partecipanti'] - $attivita['prenotazioni_cou
                         </p>
                         <hr>
                         <p><?= nl2br(htmlspecialchars($attivita['descrizione'])) ?></p>
-                        
+
                         <div class="row mt-4">
                             <div class="col-md-6">
                                 <p><strong>Data e Ora:</strong><br>
@@ -96,6 +109,20 @@ $posti_disponibili = $attivita['max_partecipanti'] - $attivita['prenotazioni_cou
                                 <?php endif; ?>
                             </div>
                         </div>
+
+                        <?php if ($video_embed_url): ?>
+                            <hr>
+                            <h3 class="h5 mb-3"><i class="bi bi-play-btn-fill me-2"></i>Video dell’attività</h3>
+                            <div class="ratio ratio-16x9 rounded overflow-hidden">
+                                <iframe src="<?= htmlspecialchars($video_embed_url) ?>"
+                                        title="Video: <?= htmlspecialchars($attivita['titolo']) ?>"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                        referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                            </div>
+                            <a href="<?= htmlspecialchars($attivita['materiali']) ?>" class="btn btn-outline-primary btn-sm mt-3" target="_blank" rel="noopener noreferrer">
+                                <i class="bi bi-youtube me-1"></i>Apri su YouTube
+                            </a>
+                        <?php endif; ?>
 
                         <?php if (isLoggedIn() && $_SESSION['user_type'] === 'utente' && !empty($attivita['link_webxr'])): ?>
                             <hr>
@@ -115,26 +142,33 @@ $posti_disponibili = $attivita['max_partecipanti'] - $attivita['prenotazioni_cou
                     </div>
                 </div>
             </div>
-            
+
             <div class="col-md-4">
                 <div class="card shadow">
                     <div class="card-body">
                         <h5 id="prenotazione">Prenotazione</h5>
                         <p><strong>Posti disponibili:</strong> <?= max(0, $posti_disponibili) ?>/<?= $attivita['max_partecipanti'] ?></p>
-                        
+
                         <?php if (isLoggedIn() && in_array($_SESSION['user_type'], ['utente', 'istituto', 'partner'], true)): ?>
                             <?php if ($ha_prenotato): ?>
                                 <div class="alert alert-success">Hai già prenotato questa attività</div>
+                                <?php if(strtotime($attivita['data_ora'])>time()): ?>
+                                <form method="POST" action="prenotazione_cancella.php">
+                                    <?= csrfField() ?><input type="hidden" name="attivita_id" value="<?= (int)$attivita_id ?>">
+                                    <button class="btn btn-outline-danger" type="submit">Cancella prenotazione</button>
+                                </form>
+                                <?php endif; ?>
                                 <a href="attivita_partecipa.php?id=<?= $attivita_id ?>&lang=<?= $lang ?>" class="btn btn-primary w-100">
                                     <i class="bi bi-box-arrow-in-right"></i> Partecipa
                                 </a>
-                            <?php elseif ($posti_disponibili > 0 && $attivita['stato'] === 'pubblicata'): ?>
+                            <?php elseif ($posti_disponibili > 0 && $attivita['stato'] === 'pubblicata' && strtotime($attivita['data_ora'])>time()): ?>
                                 <form method="POST" action="prenota.php">
+<?= csrfField() ?>
                                     <input type="hidden" name="attivita_id" value="<?= $attivita_id ?>">
                                     <input type="hidden" name="lang" value="<?= $lang ?>">
                                     <div class="mb-2">
                                         <label class="form-label small mb-1">Modalita di fruizione</label>
-                                        <select name="modalita_fruizione" class="form-select form-select-sm">
+                                        <select aria-label="Modalità di fruizione" name="modalita_fruizione" class="form-select form-select-sm">
                                             <option value="casa">Da casa (WebXR)</option>
                                             <option value="arena_fisica">In Arena VR</option>
                                             <option value="arena_mobile">Arena Mobile</option>
@@ -142,13 +176,19 @@ $posti_disponibili = $attivita['max_partecipanti'] - $attivita['prenotazioni_cou
                                     </div>
                                     <div class="mb-2">
                                         <label class="form-label small mb-1">Numero partecipanti</label>
-                                        <input type="number" name="numero_partecipanti" class="form-control form-control-sm" min="1" max="30" value="1">
+                                        <input aria-label="Numero partecipanti" type="number" name="numero_partecipanti" class="form-control form-control-sm" min="1" max="<?= max(1,(int)$posti_disponibili) ?>" value="1">
                                     </div>
                                     <div class="mb-2">
                                         <label class="form-label small mb-1">Note</label>
-                                        <textarea name="note" class="form-control form-control-sm" rows="3" placeholder="Inserisci eventuali esigenze, classe, sezione o note organizzative"></textarea>
+                                        <textarea aria-label="Note prenotazione" name="note" class="form-control form-control-sm" rows="3" placeholder="Inserisci eventuali esigenze, classe, sezione o note organizzative"></textarea>
                                     </div>
-                                    <button type="submit" class="btn btn-primary w-100">Prenota</button>
+                                    <label for="partner_vr_id" class="form-label">Struttura VR (solo arena)</label>
+                                    <select id="partner_vr_id" name="partner_vr_id" class="form-select mb-3">
+                                    <option value="0">Seleziona una struttura per le modalità arena</option>
+                                    <?php foreach($pdo->query("SELECT ID_Ente,Ragione_Sociale,Tipologia FROM istituti_e_partner WHERE Stato_Validazione=1 AND Tipologia IN ('ARENA_VR','ARENA_MOBILE','PARTNER_VR') ORDER BY Ragione_Sociale") as $venue): ?>
+                                    <option value="<?= (int)$venue['ID_Ente'] ?>"><?= htmlspecialchars($venue['Ragione_Sociale'].' — '.$venue['Tipologia']) ?></option>
+                                    <?php endforeach; ?>
+                                    </select><button type="submit" class="btn btn-primary w-100">Prenota</button>
                                 </form>
                             <?php else: ?>
                                 <div class="alert alert-warning">Non disponibile</div>
@@ -195,5 +235,3 @@ $posti_disponibili = $attivita['max_partecipanti'] - $attivita['prenotazioni_cou
     <?php endif; ?>
 </body>
 </html>
-
-

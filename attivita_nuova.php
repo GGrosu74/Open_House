@@ -1,9 +1,9 @@
 <?php
 require_once 'config.php';
-requireIstituto();
+requireRole(['istituto', 'partner']);
 
 $lang = $_GET['lang'] ?? 'it';
-$istituto_id = $_SESSION['user_id'];
+$organizzatore_id = $_SESSION['user_id'];
 $error = '';
 $success = '';
 
@@ -17,9 +17,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $supporta_vr = isset($_POST['supporta_vr']) ? 1 : 0;
     $url_vr = sanitize($_POST['url_vr'] ?? '');
     $materiali_url = sanitize($_POST['materiali_url'] ?? '');
-    $stato = $_POST['stato'] ?? 'bozza';
-    
-    if (empty($titolo) || empty($descrizione) || empty($tipo_attivita) || empty($data_ora)) {
+    $stato = 'bozza';
+
+    if ($max_partecipanti<1 || $max_partecipanti>10000 || $durata_minuti<1 || $durata_minuti>1440 || !validActivityUrl($url_vr) || !validActivityUrl($materiali_url) || !in_array($tipo_attivita,['presentazione','laboratorio','tour_virtuale','open_day','workshop','altro'],true) || !strtotime($data_ora)) {
+        $error='Controlla capienza, durata, data e indirizzi dei contenuti.';
+    } elseif (empty($titolo) || empty($descrizione) || empty($tipo_attivita) || empty($data_ora)) {
         $error = 'Compila tutti i campi obbligatori';
     } else {
         try {
@@ -28,14 +30,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                  Max_Posti, Supporta_VR, Link_WebXR, Materiali_URL, Stato)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
-                $istituto_id, $titolo, $descrizione, $tipo_attivita, $data_ora,
+                $organizzatore_id, $titolo, $descrizione, $tipo_attivita, $data_ora,
                 $durata_minuti, $max_partecipanti, $supporta_vr, $url_vr ?: null, $materiali_url ?: null, $stato
             ]);
-            $success = 'Attività creata con successo!';
+            $_SESSION['success'] = 'Evento inviato. Sarà pubblicato dopo l’approvazione dell’amministratore.';
             header('Location: attivita_gestione.php?lang=' . $lang);
             exit;
         } catch(PDOException $e) {
-            $error = 'Errore durante la creazione: ' . $e->getMessage();
+            $error = 'Errore durante la creazione: ';
         }
     }
 }
@@ -54,7 +56,7 @@ $translations = [
         'url_vr' => 'URL Ambiente VR',
         'materiali_url' => 'URL Materiali',
         'stato' => 'Stato',
-        'salva' => 'Salva',
+        'salva' => 'Invia per approvazione',
         'annulla' => 'Annulla'
     ],
     'en' => [
@@ -70,7 +72,7 @@ $translations = [
         'url_vr' => 'VR Environment URL',
         'materiali_url' => 'Materials URL',
         'stato' => 'Status',
-        'salva' => 'Save',
+        'salva' => 'Submit for approval',
         'annulla' => 'Cancel'
     ]
 ];
@@ -98,25 +100,29 @@ $t = $translations[$lang];
                         <h4 class="mb-0"><?= $t['nuova_attivita'] ?></h4>
                     </div>
                     <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>L’evento sarà salvato come “Da approvare” e diventerà pubblico solo dopo la verifica dell’amministratore.
+                        </div>
                         <?php if ($error): ?>
                             <div class="alert alert-danger"><?= $error ?></div>
                         <?php endif; ?>
-                        
+
                         <?php if ($success): ?>
                             <div class="alert alert-success"><?= $success ?></div>
                         <?php endif; ?>
-                        
+
                         <form method="POST">
+<?= csrfField() ?>
                             <div class="mb-3">
                                 <label for="titolo" class="form-label"><?= $t['titolo'] ?></label>
                                 <input type="text" class="form-control" id="titolo" name="titolo" required>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="descrizione" class="form-label"><?= $t['descrizione'] ?></label>
                                 <textarea class="form-control" id="descrizione" name="descrizione" rows="5" required></textarea>
                             </div>
-                            
+
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="tipo_attivita" class="form-label"><?= $t['tipo_attivita'] ?></label>
@@ -125,29 +131,30 @@ $t = $translations[$lang];
                                         <option value="presentazione">Presentazione</option>
                                         <option value="laboratorio">Laboratorio</option>
                                         <option value="tour_virtuale">Tour Virtuale</option>
+                                        <option value="open_day">Open Day</option>
                                         <option value="workshop">Workshop</option>
                                         <option value="altro">Altro</option>
                                     </select>
                                 </div>
-                                
+
                                 <div class="col-md-6 mb-3">
                                     <label for="data_ora" class="form-label"><?= $t['data_ora'] ?></label>
                                     <input type="datetime-local" class="form-control" id="data_ora" name="data_ora" required>
                                 </div>
                             </div>
-                            
+
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="durata_minuti" class="form-label"><?= $t['durata_minuti'] ?></label>
                                     <input type="number" class="form-control" id="durata_minuti" name="durata_minuti" value="60" min="15" step="15">
                                 </div>
-                                
+
                                 <div class="col-md-6 mb-3">
                                     <label for="max_partecipanti" class="form-label"><?= $t['max_partecipanti'] ?></label>
                                     <input type="number" class="form-control" id="max_partecipanti" name="max_partecipanti" value="50" min="1">
                                 </div>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="supporta_vr" name="supporta_vr" onchange="toggleVRFields()">
@@ -156,7 +163,7 @@ $t = $translations[$lang];
                                     </label>
                                 </div>
                             </div>
-                            
+
                             <div id="vrFields" style="display: none;">
                                 <div class="mb-3">
                                     <label for="url_vr" class="form-label"><?= $t['url_vr'] ?></label>
@@ -164,20 +171,12 @@ $t = $translations[$lang];
                                     <small class="form-text text-muted">URL dell'ambiente VR (es. A-Frame scene)</small>
                                 </div>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="materiali_url" class="form-label"><?= $t['materiali_url'] ?></label>
                                 <input type="url" class="form-control" id="materiali_url" name="materiali_url" placeholder="https://...">
                             </div>
-                            
-                            <div class="mb-3">
-                                <label for="stato" class="form-label"><?= $t['stato'] ?></label>
-                                <select class="form-select" id="stato" name="stato">
-                                    <option value="bozza">Bozza</option>
-                                    <option value="pubblicata">Pubblicata</option>
-                                </select>
-                            </div>
-                            
+
                             <div class="d-flex gap-2">
                                 <button type="submit" class="btn btn-primary"><?= $t['salva'] ?></button>
                                 <a href="attivita_gestione.php?lang=<?= $lang ?>" class="btn btn-secondary"><?= $t['annulla'] ?></a>

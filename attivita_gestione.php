@@ -1,16 +1,18 @@
 <?php
 require_once 'config.php';
-requireIstituto();
+requireRole(['istituto', 'partner']);
 
 $lang = $_GET['lang'] ?? 'it';
 $istituto_id = $_SESSION['user_id'];
+$flash_success = $_SESSION['success'] ?? '';
+unset($_SESSION['success']);
 
-$stmt = $pdo->prepare("SELECT a.ID_Attivita as id, a.Titolo as titolo, a.Descrizione as descrizione, a.Data_Ora as data_ora, 
-                       a.Max_Posti as max_partecipanti, a.Stato as stato, COUNT(p.id) as prenotazioni_count 
-                       FROM attivita_eventi a 
+$stmt = $pdo->prepare("SELECT a.ID_Attivita as id, a.Titolo as titolo, a.Descrizione as descrizione, a.Data_Ora as data_ora,
+                       a.Max_Posti as max_partecipanti, a.Stato as stato, COALESCE(SUM(p.numero_partecipanti),0) as prenotazioni_count
+                       FROM attivita_eventi a
                        LEFT JOIN prenotazioni p ON a.ID_Attivita = p.attivita_id AND p.stato = 'confermata'
-                       WHERE a.FK_Ente_Organizzatore = ? 
-                       GROUP BY a.ID_Attivita 
+                       WHERE a.FK_Ente_Organizzatore = ?
+                       GROUP BY a.ID_Attivita
                        ORDER BY a.Data_Ora DESC");
 $stmt->execute([$istituto_id]);
 $attivita = $stmt->fetchAll();
@@ -35,6 +37,9 @@ $t = $translations[$lang];
     <?php include 'navbar.php'; ?>
 
     <div class="container mt-4">
+        <?php if ($flash_success): ?>
+            <div class="alert alert-success" role="status"><?= htmlspecialchars($flash_success) ?></div>
+        <?php endif; ?>
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2><?= $t['title'] ?></h2>
             <a href="attivita_nuova.php?lang=<?= $lang ?>" class="btn btn-primary">
@@ -65,7 +70,7 @@ $t = $translations[$lang];
                                         <td><?= date('d/m/Y H:i', strtotime($a['data_ora'])) ?></td>
                                         <td>
                                             <span class="badge bg-<?= $a['stato'] === 'pubblicata' ? 'success' : ($a['stato'] === 'in_corso' ? 'warning' : 'secondary') ?>">
-                                                <?= ucfirst($a['stato']) ?>
+                                                <?= $a['stato'] === 'bozza' ? 'Da approvare' : ($a['stato'] === 'cancellata' ? 'Bloccata' : ucfirst($a['stato'])) ?>
                                             </span>
                                         </td>
                                         <td><?= $a['prenotazioni_count'] ?>/<?= $a['max_partecipanti'] ?></td>

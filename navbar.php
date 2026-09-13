@@ -1,3 +1,4 @@
+<?php if (realpath($_SERVER['SCRIPT_FILENAME']??'')===__FILE__) { http_response_code(404); exit; } ?>
 <?php
 if (!isset($lang)) {
     $lang = $_GET['lang'] ?? 'it';
@@ -90,7 +91,7 @@ $nt = $nav_translations[$lang] ?? $nav_translations['it'];
                         <a class="nav-link" href="dashboard.php?lang=<?= htmlspecialchars($lang) ?>"><?= htmlspecialchars($nt['dashboard']) ?></a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="logout.php"><?= htmlspecialchars($nt['logout']) ?></a>
+                        <a class="nav-link" href="logout.php?lang=<?= htmlspecialchars($lang) ?>"><?= htmlspecialchars($nt['logout']) ?></a>
                     </li>
                 <?php else: ?>
                     <li class="nav-item">

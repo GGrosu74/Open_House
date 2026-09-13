@@ -52,7 +52,7 @@ try {
                      i.Indirizzo, i.Comune, i.Provincia, i.Regione, i.CF_PIVA,
                      i.Coordinate_GPS, i.Stato_Validazione
               FROM istituti_e_partner i
-              WHERE 1=1";
+              WHERE i.Stato_Validazione=1";
 
     $params = [];
 
@@ -60,13 +60,16 @@ try {
     if ($view_type === 'partner_vr') {
         $query .= " AND i.Tipologia IN ('ARENA_VR', 'ARENA_MOBILE', 'PARTNER_VR')";
     } elseif ($view_type === 'partner_fsl') {
-        $query .= " AND i.Cod_REA IS NOT NULL AND i.Cod_REA != ''";
+        $query .= " AND (i.Tipologia LIKE '%AZIENDA%'
+                          OR (i.Tipologia LIKE '%PARTNER%' AND i.Tipologia <> 'PARTNER_VR'))";
     } elseif ($view_type === 'istituti') {
-        $query .= " AND i.Tipologia IN ('SCUOLA PRIMARIA', 'SCUOLA INFANZIA', 'SCUOLA PRIMO GRADO', 
+        $query .= " AND i.Tipologia IN ('SCUOLA PRIMARIA', 'SCUOLA INFANZIA', 'SCUOLA PRIMO GRADO',
                                          'ISTITUTO COMPRENSIVO', 'LICEO CLASSICO', 'LICEO SCIENTIFICO',
                                          'ISTITUTO TECNICO', 'ISTITUTO PROFESSIONALE', 'ISTITUTO MAGISTRALE')";
     } else {
-        // 'tutti' -> no extra filter
+        $query .= " AND (i.Tipologia IN ('ARENA_VR', 'ARENA_MOBILE', 'PARTNER_VR')
+                          OR i.Tipologia LIKE '%AZIENDA%'
+                          OR (i.Tipologia LIKE '%PARTNER%' AND i.Tipologia <> 'PARTNER_VR'))";
     }
 
     // Filtra per regione
@@ -87,12 +90,15 @@ try {
 
     $query .= " ORDER BY i.Regione, i.Provincia, i.Ragione_Sociale";
 
-    $stmt = $pdo->prepare($query);
+    $page=max(1,(int)($_GET['page']??1)); $pageSize=25; $offset=($page-1)*$pageSize;
+$query.=' LIMIT '.($pageSize+1).' OFFSET '.$offset;
+$stmt = $pdo->prepare($query);
     $stmt->execute($params);
     $istituti = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$hasMore=count($istituti)>$pageSize; if($hasMore) array_pop($istituti);
 
 } catch (Exception $e) {
-    $error = "Errore nel caricamento: " . $e->getMessage();
+    $error = "Errore nel caricamento: ";
 }
 
 // Ottieni lista regioni
@@ -195,25 +201,25 @@ try {
             margin-bottom: 30px;
             border: 2px solid #0066cc;
         }
-        
+
         .filter-row {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 15px;
             align-items: end;
         }
-        
+
         .filter-group {
             display: flex;
             flex-direction: column;
         }
-        
+
         .filter-group label {
             font-weight: 600;
             margin-bottom: 8px;
             color: #003d82;
         }
-        
+
         .filter-group input,
         .filter-group select {
             padding: 12px;
@@ -229,7 +235,7 @@ try {
             border-color: #003d82;
             box-shadow: 0 0 8px rgba(0, 102, 204, 0.3);
         }
-        
+
         .btn-filter {
             padding: 12px 24px;
             background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
@@ -240,13 +246,13 @@ try {
             font-weight: 600;
             transition: all 0.3s;
         }
-        
+
         .btn-filter:hover {
             background: linear-gradient(135deg, #0052a3 0%, #003d82 100%);
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0, 102, 204, 0.3);
         }
-        
+
         .btn-reset {
             padding: 12px 24px;
             background: #6c757d;
@@ -257,18 +263,18 @@ try {
             font-weight: 600;
             transition: all 0.3s;
         }
-        
+
         .btn-reset:hover {
             background: #5a6268;
             transform: translateY(-2px);
         }
-        
+
         .istituti-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 20px;
         }
-        
+
         .istituto-card {
             background: white;
             border: 2px solid #e8eef5;
@@ -277,19 +283,19 @@ try {
             box-shadow: 0 4px 15px rgba(0, 102, 204, 0.1);
             transition: all 0.3s;
         }
-        
+
         .istituto-card:hover {
             box-shadow: 0 8px 25px rgba(0, 102, 204, 0.2);
             transform: translateY(-4px);
             border-color: #0066cc;
         }
-        
+
         .istituto-name {
             font-weight: 700;
             margin-bottom: 12px;
             color: #003d82;
         }
-        
+
         .istituto-type {
             display: inline-block;
             padding: 6px 14px;
@@ -301,22 +307,22 @@ try {
             font-weight: 600;
             margin-bottom: 15px;
         }
-        
+
         .istituto-info {
             font-size: 0.95rem;
             line-height: 1.6;
             color: #666;
         }
-        
+
         .istituto-info p {
             margin: 8px 0;
         }
-        
+
         .info-label {
             font-weight: 600;
             color: #333;
         }
-        
+
         .no-results {
             text-align: center;
             padding: 40px;
@@ -324,7 +330,7 @@ try {
             border-radius: 8px;
             color: #666;
         }
-        
+
         .results-count {
             margin-bottom: 20px;
             font-size: 1.1rem;
@@ -355,13 +361,13 @@ try {
 </head>
 <body class="partner-page">
     <?php include 'navbar.php'; ?>
-    
+
     <main class="container">
         <div class="header-section">
             <img src="image/Logo_ partner.png" alt="Logo Partner">
             <h1><?php echo htmlspecialchars($page_title); ?></h1>
         </div>
-        
+
         <!-- Filtri -->
         <form method="GET" class="filter-section">
             <input type="hidden" name="lang" value="<?php echo htmlspecialchars($lang); ?>">
@@ -375,31 +381,31 @@ try {
                         <option value="istituti" <?php echo ($view_type === 'istituti') ? 'selected' : ''; ?>>🏫 Istituti</option>
                 </select>
             </div>
-            
+
             <div class="filter-row">
                 <div class="filter-group">
                     <label for="search">Ricerca Nome</label>
-                    <input type="text" id="search" name="search" placeholder="Cerca per nome..." 
+                    <input type="text" id="search" name="search" placeholder="Cerca per nome..."
                            value="<?php echo htmlspecialchars($search); ?>">
                 </div>
-                
+
                 <div class="filter-group">
                     <label for="regione">Regione</label>
                     <select id="regione" name="regione">
                         <option value="">Tutte le regioni</option>
                         <?php foreach ($regioni as $reg): ?>
-                            <option value="<?php echo htmlspecialchars($reg); ?>" 
+                            <option value="<?php echo htmlspecialchars($reg); ?>"
                                     <?php echo ($regione === $reg) ? 'selected' : ''; ?>>
                                 <?php echo htmlspecialchars($reg); ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
-                
+
                 <div class="filter-group">
                     <button type="submit" class="btn-filter">🔍 Filtra</button>
                 </div>
-                
+
                 <div class="filter-group">
                     <a href="?view=<?php echo htmlspecialchars($view_type); ?>&lang=<?php echo htmlspecialchars($lang); ?>" class="btn-reset">Azzera Filtri</a>
                 </div>
@@ -433,9 +439,9 @@ try {
                     <?php foreach ($istituti as $istituto): ?>
                         <div class="istituto-card">
                             <div class="istituto-name"><?php echo htmlspecialchars($istituto['Ragione_Sociale']); ?></div>
-                        
+
                         <div class="istituto-type">
-                            <?php 
+                            <?php
                             $tipologie_map = [
                                 'AZIENDA' => '🏢',
                                 'ARENA_VR' => '🥽',
@@ -455,26 +461,26 @@ try {
                             echo $icon . ' ' . htmlspecialchars($istituto['Tipologia']);
                             ?>
                         </div>
-                        
+
                         <div class="istituto-info">
                             <?php if (!empty($istituto['Provincia'])): ?>
                                 <p><span class="info-label">Provincia:</span> <?php echo htmlspecialchars($istituto['Provincia']); ?></p>
                             <?php endif; ?>
-                            
+
                             <?php if (!empty($istituto['Regione'])): ?>
                                 <p><span class="info-label">Regione:</span> <?php echo htmlspecialchars($istituto['Regione']); ?></p>
                             <?php endif; ?>
-                            
+
                             <?php if (!empty($istituto['Email'])): ?>
                                 <p><span class="info-label">Email:</span> <a href="mailto:<?php echo htmlspecialchars($istituto['Email']); ?>">
                                     <?php echo htmlspecialchars($istituto['Email']); ?></a></p>
                             <?php endif; ?>
-                            
+
                             <?php if (!empty($istituto['Telefono'])): ?>
                                 <p><span class="info-label">Tel:</span> <?php echo htmlspecialchars($istituto['Telefono']); ?></p>
                             <?php endif; ?>
                         </div>
-                        
+
                         <a href="istituto_dettaglio.php?id=<?php echo $istituto['ID_Ente']; ?>&lang=<?php echo htmlspecialchars($lang); ?>" class="btn-detail">
                             Visualizza Dettagli →
                         </a>
@@ -496,5 +502,6 @@ try {
             }
         });
     </script>
+<?= paginationLinks($page??1,$hasMore??false) ?>
 </body>
 </html>

@@ -1,3 +1,4 @@
+<?php if (PHP_SAPI !== 'cli') { http_response_code(404); exit; } ?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -18,12 +19,12 @@
                 <h4 class="mb-0"><i class="bi bi-clipboard-check"></i> Test Sezione "Attori Principali"</h4>
             </div>
             <div class="card-body p-4">
-                
+
                 <h5 class="mb-4">📊 Status Database</h5>
-                
+
                 <?php
                 require_once 'config.php';
-                
+
                 // Conteggi
                 $totali = [];
                 try {
@@ -35,7 +36,7 @@
                     echo "<div class='alert alert-danger'>Errore database: " . $e->getMessage() . "</div>";
                 }
                 ?>
-                
+
                 <div class="table-responsive">
                     <table class="table table-striped">
                         <thead class="table-dark">
@@ -66,11 +67,11 @@
                         </tbody>
                     </table>
                 </div>
-                
+
                 <hr>
-                
+
                 <h5 class="mb-4">🧪 Test Link Attori Principali</h5>
-                
+
                 <div class="row">
                     <div class="col-lg-4 mb-3">
                         <div class="card">
@@ -83,7 +84,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="col-lg-4 mb-3">
                         <div class="card">
                             <div class="card-body">
@@ -95,7 +96,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="col-lg-4 mb-3">
                         <div class="card">
                             <div class="card-body">
@@ -108,11 +109,11 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <hr>
-                
+
                 <h5 class="mb-4">📝 Verifiche Completate</h5>
-                
+
                 <div class="alert alert-success">
                     <h6 class="alert-heading"><i class="bi bi-check-circle"></i> ✅ Correzioni Implementate</h6>
                     <ul class="mb-0">
@@ -124,7 +125,7 @@
                         <li>✅ Database ha <?= array_sum($totali) ?> enti registrati</li>
                     </ul>
                 </div>
-                
+
                 <div class="alert alert-info">
                     <h6 class="alert-heading"><i class="bi bi-info-circle"></i> Come Testare</h6>
                     <ol class="mb-0">
@@ -134,7 +135,7 @@
                         <li>Verifica che le pagine si carichino con i filtri corretti</li>
                     </ol>
                 </div>
-                
+
             </div>
             <div class="card-footer text-muted">
                 <small><i class="bi bi-clock"></i> Testato il: <?= date('Y-m-d H:i:s') ?></small>

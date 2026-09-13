@@ -1,10 +1,11 @@
+<?php if (PHP_SAPI !== 'cli') { http_response_code(404); exit; } ?>
 <?php
 /**
  * Script di migrazione: istituti -> istituti_e_partner
- * 
+ *
  * Da eseguire UNA SOLA VOLTA per aggiornare la struttura del database
- * 
- * Uso: 
+ *
+ * Uso:
  * 1. Posizionare il file in una directory accessibile (es. /admin/)
  * 2. Accedere via browser: http://localhost/Open_House/migrate_istituti.php
  * 3. Fare click su "Esegui Migrazione"
@@ -64,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_migration']))
               KEY `idx_stato_validazione` (`Stato_Validazione`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             SQL;
-            
+
             $pdo->exec($createTableSQL);
             $message .= "✓ Tabella 'istituti_e_partner' creata\n";
         } else {
@@ -74,12 +75,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_migration']))
         // Step 3: Importa dati dalla vecchia tabella se esiste
         if ($backup_created || $newTableExists) {
             $pdo->exec("
-                INSERT INTO istituti_e_partner 
+                INSERT INTO istituti_e_partner
                   (ID_Ente, Cod_Mecc, Ragione_Sociale, Email, Tipologia, Indirizzo, Comune, Provincia, Regione, created_at, Stato_Validazione)
-                SELECT 
+                SELECT
                   id, codice_istituto, nome, email, tipo_scuola, indirizzo, comune, provincia, regione, created_at, 1
                 FROM istituti
-                ON DUPLICATE KEY UPDATE 
+                ON DUPLICATE KEY UPDATE
                   Ragione_Sociale = VALUES(Ragione_Sociale),
                   Tipologia = VALUES(Tipologia),
                   Email = VALUES(Email)
@@ -110,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_migration']))
 
     } catch (Exception $e) {
         $pdo->rollBack();
-        $error = "ERRORE DURANTE LA MIGRAZIONE:\n" . $e->getMessage();
+        $error = "ERRORE DURANTE LA MIGRAZIONE:\n";
         $success = false;
     }
 }
@@ -145,7 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_migration']))
             <small>istituti → istituti_e_partner</small>
         </div>
         <div class="card-body p-4">
-            
+
             <?php if ($success): ?>
                 <div class="alert alert-success">
                     <h4 class="alert-heading">✓ Migrazione Completata!</h4>
@@ -189,6 +190,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_migration']))
                 </table>
 
                 <form method="POST" class="mt-4">
+<?= csrfField() ?>
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" id="confirm" name="confirm_migration" required>
                         <label class="form-check-label" for="confirm">

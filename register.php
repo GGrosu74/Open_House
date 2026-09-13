@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'config.php';
 
 $error = '';
@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $data_nascita = $_POST['utente_data_nascita'] ?? null;
                 $telefono = sanitize($_POST['utente_telefono'] ?? '');
 
-                if (empty($nome) || empty($cognome) || empty($tipo_utente)) {
+                if (empty($nome) || empty($cognome) || !in_array($tipo_utente,['studente','genitore','docente'],true)) {
                     throw new RuntimeException('Compila tutti i campi obbligatori per utente finale.');
                 }
 
@@ -44,13 +44,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $data_nascita ?: null,
                     $telefono ?: null,
                 ]);
+                $userId = (int) $pdo->lastInsertId();
 
-                $success = 'Registrazione completata. Controlla la tua email per la conferma.';
                 sendHtmlEmail(
                     $email,
                     'Conferma registrazione Open House',
                     '<p>Ciao ' . htmlspecialchars($nome) . ',</p><p>la registrazione come ' . htmlspecialchars($tipo_utente) . ' e stata completata con successo.</p><p>Open House</p>'
                 );
+
+                session_regenerate_id(true);
+                $_SESSION['user_id'] = $userId;
+                $_SESSION['user_type'] = 'utente';
+                $_SESSION['user_name'] = trim($nome . ' ' . $cognome);
+                $_SESSION['user_email'] = $email;
+                $_SESSION['success'] = 'Registrazione completata. Hai effettuato automaticamente l’accesso.';
+                header('Location: dashboard.php?lang=' . urlencode($lang));
+                exit;
             } elseif ($user_type === 'istituto') {
                 $ragioneSociale = sanitize($_POST['istituto_ragione_sociale'] ?? '');
                 $tipologia = sanitize($_POST['istituto_tipologia'] ?? '');
@@ -64,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $telefono = sanitize($_POST['istituto_telefono'] ?? '');
                 $descrizione = sanitize($_POST['istituto_descrizione'] ?? '');
 
-                if (empty($ragioneSociale) || empty($tipologia) || empty($provincia) || empty($regione)) {
+                if (empty($ragioneSociale) || !in_array($tipologia,['SCUOLA INFANZIA','SCUOLA PRIMARIA','SCUOLA PRIMO GRADO','SCUOLA SECONDARIA DI SECONDO GRADO','UNIVERSITA'],true) || empty($codMecc) || empty($provincia) || empty($regione)) {
                     throw new RuntimeException('Compila tutti i campi obbligatori per istituto.');
                 }
 
@@ -85,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'password' => hashPassword($password),
                 ]);
 
-                $success = 'Registrazione istituto completata. Riceverai conferma email.';
+                $success = 'Registrazione istituto ricevuta. Attendi la validazione.';
                 sendHtmlEmail(
                     $email,
                     'Conferma registrazione istituto Open House',
@@ -93,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
             } elseif ($user_type === 'partner') {
                 $ragioneSociale = sanitize($_POST['partner_ragione_sociale'] ?? '');
-                $tipoPartner = 'AZIENDA_FSL';
+                $tipoPartner = $_POST['partner_tipologia'] ?? '';
                 $cfPiva = sanitize($_POST['partner_cf_piva'] ?? '');
                 $codRea = sanitize($_POST['partner_cod_rea'] ?? '');
                 $indirizzo = sanitize($_POST['partner_indirizzo'] ?? '');
@@ -104,15 +113,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $telefono = sanitize($_POST['partner_telefono'] ?? '');
                 $descrizione = sanitize($_POST['partner_descrizione'] ?? '');
 
-                if (empty($ragioneSociale) || empty($codRea) || empty($provincia) || empty($regione)) {
-                    throw new RuntimeException('Compila tutti i campi obbligatori per partner FSL (incluso Codice REA).');
+                $tipologiePartner = ['AZIENDA_FSL', 'PARTNER_VR'];
+                if (empty($ragioneSociale) || !in_array($tipoPartner, $tipologiePartner, true) || empty($provincia) || empty($regione)) {
+                    throw new RuntimeException('Seleziona la tipologia partner e compila tutti i campi obbligatori.');
+                }
+                if (empty($codRea)) {
+                    throw new RuntimeException('Il Codice REA è obbligatorio per tutti i partner.');
                 }
 
                 insertIstitutoPartner($pdo, [
                     'Ragione_Sociale' => $ragioneSociale,
                     'Tipologia' => $tipoPartner,
                     'CF_PIVA' => $cfPiva ?: null,
-                    'Cod_REA' => $codRea ?: null,
+                    'Cod_REA' => $codRea,
                     'Indirizzo' => $indirizzo ?: null,
                     'Comune' => $comune ?: null,
                     'Provincia' => $provincia,
@@ -124,11 +137,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'password' => hashPassword($password),
                 ]);
 
-                $success = 'Registrazione partner completata. Riceverai conferma email.';
+                $nomeTipoPartner = $tipoPartner === 'PARTNER_VR' ? 'Partner VR' : 'Partner FSL';
+                $success = 'Registrazione come ' . $nomeTipoPartner . ' ricevuta. Attendi la validazione.';
                 sendHtmlEmail(
                     $email,
                     'Conferma registrazione partner Open House',
-                    '<p>Gentile ' . htmlspecialchars($ragioneSociale) . ',</p><p>la registrazione partner e stata ricevuta ed e in attesa di validazione.</p><p>Open House</p>'
+                    '<p>Gentile ' . htmlspecialchars($ragioneSociale) . ',</p><p>la registrazione come ' . htmlspecialchars($nomeTipoPartner) . ' è stata ricevuta ed è in attesa di validazione.</p><p>Open House</p>'
                 );
             } else {
                 throw new RuntimeException('Tipo utente non valido.');
@@ -139,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ((string) $e->getCode() === '23000') {
                 $error = 'Email gia registrata.';
             } else {
-                $error = 'Errore durante la registrazione: ' . $e->getMessage();
+                $error = 'Errore durante la registrazione: ';
             }
         } catch (RuntimeException $e) {
             $error = $e->getMessage();
@@ -219,16 +233,17 @@ $t = $translations[$lang];
                 <div class="card shadow">
                     <div class="card-body p-4">
                         <h2 class="card-title text-center mb-4"><?= $t['register'] ?></h2>
-                        
+
                         <?php if ($error): ?>
                             <div class="alert alert-danger"><?= $error ?></div>
                         <?php endif; ?>
-                        
+
                         <?php if ($success): ?>
                             <div class="alert alert-success"><?= $success ?></div>
                         <?php endif; ?>
-                        
+
                         <form method="POST" id="registerForm">
+<?= csrfField() ?>
                             <div class="mb-3">
                                 <label for="user_type" class="form-label"><?= $t['user_type'] ?> *</label>
                                 <select class="form-select" id="user_type" name="user_type" required onchange="toggleFields()">
@@ -238,14 +253,14 @@ $t = $translations[$lang];
                                     <option value="partner"><?= $t['partner'] ?></option>
                                 </select>
                             </div>
-                            
+
                             <!-- Campi Istituto -->
                             <div id="istitutoFields" style="display: none;">
                                 <div class="mb-3">
                                     <label for="istituto_ragione_sociale" class="form-label">Ragione sociale *</label>
                                     <input type="text" class="form-control" id="istituto_ragione_sociale" name="istituto_ragione_sociale" data-required-for="istituto">
                                 </div>
-                                
+
                                 <div class="mb-3">
                                     <label for="istituto_tipologia" class="form-label">Tipologia *</label>
                                     <select class="form-select" id="istituto_tipologia" name="istituto_tipologia" data-required-for="istituto">
@@ -268,12 +283,12 @@ $t = $translations[$lang];
                                         <input type="text" class="form-control" id="istituto_cod_mecc" name="istituto_cod_mecc" data-required-for="istituto">
                                     </div>
                                 </div>
-                                
+
                                 <div class="mb-3">
                                     <label for="istituto_indirizzo" class="form-label"><?= $t['indirizzo'] ?></label>
                                     <textarea class="form-control" id="istituto_indirizzo" name="istituto_indirizzo" rows="2"></textarea>
                                 </div>
-                                
+
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label for="istituto_regione" class="form-label">Regione *</label>
@@ -288,7 +303,7 @@ $t = $translations[$lang];
                                         </select>
                                     </div>
                                 </div>
-                                
+
                                 <div class="mb-3">
                                     <label for="istituto_comune" class="form-label">Comune/Citta</label>
                                     <input type="text" class="form-control" id="istituto_comune" name="istituto_comune" placeholder="Es. Milano">
@@ -298,12 +313,12 @@ $t = $translations[$lang];
                                     <label for="istituto_coordinate_gps" class="form-label">Coordinate GPS</label>
                                     <input type="text" class="form-control" id="istituto_coordinate_gps" name="istituto_coordinate_gps" placeholder="Es. 45.4642, 9.1900">
                                 </div>
-                                
+
                                 <div class="mb-3">
                                     <label for="istituto_telefono" class="form-label"><?= $t['telefono'] ?></label>
                                     <input type="tel" class="form-control" id="istituto_telefono" name="istituto_telefono">
                                 </div>
-                                
+
                                 <div class="mb-3">
                                     <label for="istituto_descrizione" class="form-label"><?= $t['descrizione'] ?></label>
                                     <textarea class="form-control" id="istituto_descrizione" name="istituto_descrizione" rows="3"></textarea>
@@ -318,9 +333,13 @@ $t = $translations[$lang];
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label"><?= $t['tipo_partner'] ?></label>
-                                    <input type="text" class="form-control" value="Azienda FSL" readonly>
-                                    <input type="hidden" id="partner_tipologia" name="partner_tipologia" value="AZIENDA_FSL">
+                                    <label for="partner_tipologia" class="form-label"><?= $t['tipo_partner'] ?> *</label>
+                                    <select class="form-select" id="partner_tipologia" name="partner_tipologia" data-required-for="partner">
+                                        <option value="">-- Seleziona la tipologia partner --</option>
+                                        <option value="AZIENDA_FSL" <?= ($_POST['partner_tipologia'] ?? '') === 'AZIENDA_FSL' ? 'selected' : '' ?>>Partner FSL</option>
+                                        <option value="PARTNER_VR" <?= ($_POST['partner_tipologia'] ?? '') === 'PARTNER_VR' ? 'selected' : '' ?>>Partner VR</option>
+                                    </select>
+                                    <div class="form-text">Scegli FSL per aziende e percorsi scuola-lavoro; scegli VR per servizi ed esperienze in realtà virtuale.</div>
                                 </div>
 
                                 <div class="row">
@@ -328,9 +347,10 @@ $t = $translations[$lang];
                                         <label for="partner_cf_piva" class="form-label">CF/PIVA</label>
                                         <input type="text" class="form-control" id="partner_cf_piva" name="partner_cf_piva">
                                     </div>
-                                    <div class="col-md-4 mb-3">
+                                    <div class="col-md-4 mb-3" id="partnerReaGroup">
                                         <label for="partner_cod_rea" class="form-label">Codice REA *</label>
                                         <input type="text" class="form-control" id="partner_cod_rea" name="partner_cod_rea" data-required-for="partner">
+                                        <div class="form-text">Obbligatorio per Partner FSL e Partner VR.</div>
                                     </div>
                                     <div class="col-md-4 mb-3">
                                         <label for="partner_comune" class="form-label"><?= $t['citta'] ?></label>
@@ -373,7 +393,7 @@ $t = $translations[$lang];
                                     <textarea class="form-control" id="partner_descrizione" name="partner_descrizione" rows="3"></textarea>
                                 </div>
                             </div>
-                            
+
                             <!-- Campi Utente -->
                             <div id="utenteFields" style="display: none;">
                                 <div class="row">
@@ -386,7 +406,7 @@ $t = $translations[$lang];
                                         <input type="text" class="form-control" id="utente_cognome" name="utente_cognome" data-required-for="utente">
                                     </div>
                                 </div>
-                                
+
                                 <div class="mb-3">
                                     <label for="utente_tipo" class="form-label"><?= $t['tipo_utente'] ?> *</label>
                                     <select class="form-select" id="utente_tipo" name="utente_tipo" data-required-for="utente">
@@ -396,38 +416,38 @@ $t = $translations[$lang];
                                         <option value="docente">Docente</option>
                                     </select>
                                 </div>
-                                
+
                                 <div class="mb-3">
                                     <label for="utente_data_nascita" class="form-label"><?= $t['data_nascita'] ?></label>
                                     <input type="date" class="form-control" id="utente_data_nascita" name="utente_data_nascita">
                                 </div>
-                                
+
                                 <div class="mb-3">
                                     <label for="utente_telefono" class="form-label"><?= $t['telefono'] ?></label>
                                     <input type="tel" class="form-control" id="utente_telefono" name="utente_telefono">
                                 </div>
                             </div>
-                            
+
                             <!-- Campi comuni -->
                             <div class="mb-3">
                                 <label for="email" class="form-label"><?= $t['email'] ?> *</label>
                                 <input type="email" class="form-control" id="email" name="email" required>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="password" class="form-label"><?= $t['password'] ?> *</label>
                                 <input type="password" class="form-control" id="password" name="password" required minlength="8">
                                 <small class="form-text text-muted">Minimo 8 caratteri</small>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label for="confirm_password" class="form-label"><?= $t['confirm_password'] ?> *</label>
                                 <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
                             </div>
-                            
+
                             <button type="submit" class="btn btn-primary w-100 mb-3"><?= $t['register'] ?></button>
                         </form>
-                        
+
                         <div class="text-center">
                             <p class="mb-0"><?= $t['has_account'] ?> <a href="login.php?lang=<?= $lang ?>"><?= $t['login'] ?></a></p>
                         </div>
@@ -458,7 +478,7 @@ $t = $translations[$lang];
                 initRegionProvinceSelects('partner_regione', 'partner_provincia');
             }
         }
-        
+
         document.addEventListener('DOMContentLoaded', function() {
             initRegionProvinceSelects('istituto_regione', 'istituto_provincia');
             initRegionProvinceSelects('partner_regione', 'partner_provincia');
@@ -473,5 +493,3 @@ $t = $translations[$lang];
     <?php endif; ?>
 </body>
 </html>
-
-

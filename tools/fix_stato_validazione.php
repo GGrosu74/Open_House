@@ -1,4 +1,6 @@
 <?php
+if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
+
 $path = __DIR__ . '/../database/database.sql';
 $backup = $path . '.bak.' . time();
 copy($path, $backup) or die("Backup failed\n");
