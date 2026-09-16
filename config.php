@@ -178,4 +178,13 @@ function normalizeAttivitaRow(array $row): array {
         'stato' => $row['Stato'] ?? $row['stato'] ?? 'bozza',
     ];
 }
+
+/** Restituisce un collegamento WebXR valido anche per record legacy del braccio robotico. */
+function resolveWebxrUrl(string $title, ?string $url): string {
+    if (stripos($title, 'braccio robotico') !== false || stripos($title, 'insect robo') !== false) {
+        return 'https://Novia-RDI-XR-Robotics.github.io/a-frame-xr-tutorial/';
+    }
+
+    return trim((string) $url);
+}
 initializeSecurity($pdo);

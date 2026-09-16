@@ -21,6 +21,7 @@ if (!$attivita) {
     exit;
 }
 $video_embed_url = !empty($attivita['materiali_url']) ? youtubeEmbedUrl($attivita['materiali_url']) : null;
+$webxrUrl = resolveWebxrUrl((string) $attivita['titolo'], $attivita['url_vr'] ?? null);
 
 // Carica messaggi chat
 $userTable = getUserTable($pdo, false);
@@ -50,7 +51,7 @@ $messaggi = $stmt->fetchAll();
         .modal-backdrop { z-index: 10040; }
         #chatMessages { min-height: 280px; max-height: 55vh; overflow-y: auto; }
     </style>
-    <?php if ($attivita['supporta_vr'] && $attivita['url_vr'] && validActivityUrl($attivita['url_vr'])): ?>
+    <?php if ($attivita['supporta_vr'] && $webxrUrl !== '' && validActivityUrl($webxrUrl)): ?>
         <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <?php endif; ?>
 </head>
@@ -66,11 +67,11 @@ $messaggi = $stmt->fetchAll();
 
     <div class="container-fluid mt-3">
         <div class="row">
-            <?php if ($attivita['supporta_vr'] && $attivita['url_vr'] && validActivityUrl($attivita['url_vr'])): ?>
+            <?php if ($attivita['supporta_vr'] && $webxrUrl !== '' && validActivityUrl($webxrUrl)): ?>
                 <div class="col-12">
                     <div class="card bg-dark border-secondary">
                         <div class="card-body p-0" style="height: 80vh;">
-                            <iframe title="Esperienza immersiva" allow="xr-spatial-tracking; fullscreen" allowfullscreen src="<?= htmlspecialchars($attivita['url_vr']) ?>"
+                            <iframe title="Esperienza immersiva" allow="xr-spatial-tracking; fullscreen" allowfullscreen src="<?= htmlspecialchars($webxrUrl) ?>"
                                     style="width: 100%; height: 100%; border: none;"></iframe>
                         </div>
                     </div>
