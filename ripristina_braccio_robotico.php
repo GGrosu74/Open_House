@@ -9,7 +9,7 @@ try {
     $titoloVecchio = 'Simulazione WebXR - Braccio robotico 3D';
     $titolo = 'Insect Robo';
     $descrizione = 'Laboratorio di robototecnica con simulazione WebXR di Insect Robo, un braccio robotico 3D ispirato agli insetti, pensato per utenti registrati del portale e per l\'orientamento tecnologico.';
-    $linkWebxr = 'https://raw.githack.com/GGrosu74/Open_House/main/simulazione_braccio_robotico_cdn.html?v=5';
+    $linkWebxr = 'https://Novia-RDI-XR-Robotics.github.io/a-frame-xr-tutorial/';
     $dataOra = '2026-05-15 10:00:00';
 
     $stmt = $pdo->prepare("SELECT ID_Ente FROM istituti_e_partner WHERE Cod_Mecc = ? LIMIT 1");
