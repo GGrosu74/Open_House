@@ -112,8 +112,26 @@ $nt = $nav_translations[$lang] ?? $nav_translations['it'];
     </div>
 </nav>
 
+<style>
+    #chiSiamoModal { z-index: 2050; }
+    .modal-backdrop.show { z-index: 2040; }
+    #chiSiamoModal .modal-dialog { max-height: calc(100vh - 2rem); }
+    #chiSiamoModal .modal-content { max-height: calc(100vh - 2rem); overflow: hidden; }
+    #chiSiamoModal .modal-body { overflow-y: auto; }
+    #chiSiamoModal .chi-siamo-image {
+        display: block;
+        width: 100%;
+        height: clamp(180px, 34vh, 300px);
+        object-fit: cover;
+        object-position: center;
+    }
+    @media (max-height: 700px) {
+        #chiSiamoModal .chi-siamo-image { height: 180px; }
+    }
+</style>
+
 <div class="modal fade" id="chiSiamoModal" tabindex="-1" aria-labelledby="chiSiamoModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="chiSiamoModalLabel"><?= htmlspecialchars($nt['chi_siamo_title']) ?></h5>
@@ -122,7 +140,10 @@ $nt = $nav_translations[$lang] ?? $nav_translations['it'];
             <div class="modal-body">
                 <div class="row">
                     <div class="col-12 mb-3">
-                        <img src="image/745d5f52-0e02-42ee-b3f5-1a39e2aa9f9a.webp" alt="VR Open House" class="img-fluid" style="max-height:300px; object-fit:cover; width:100%;">
+                        <img src="image/chi-siamo.webp"
+                             onerror="this.onerror=null;this.src='https://raw.githubusercontent.com/GGrosu74/Open_House/main/image/chi-siamo.webp';"
+                             alt="Studenti in un ambiente formativo con realtà virtuale e robotica"
+                             class="img-fluid chi-siamo-image" width="1280" height="500">
                     </div>
                     <div class="col-12 text-muted" style="line-height:1.5;">
                         <h6><strong>L'innovazione al servizio dell'orientamento scolastico e della formazione</strong></h6>
