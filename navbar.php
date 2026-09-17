@@ -113,43 +113,100 @@ $nt = $nav_translations[$lang] ?? $nav_translations['it'];
 </nav>
 
 <style>
-    #chiSiamoModal { z-index: 2050; }
-    .modal-backdrop.show { z-index: 2040; }
-    #chiSiamoModal .modal-dialog { max-height: calc(100vh - 2rem); }
-    #chiSiamoModal .modal-content { max-height: calc(100vh - 2rem); overflow: hidden; }
-    #chiSiamoModal .modal-body { overflow-y: auto; }
+    #chiSiamoModal { z-index: 10050; }
+    .modal-backdrop.show { z-index: 10040; }
+    #chiSiamoModal .modal-dialog {
+        height: calc(100vh - 1rem);
+        max-height: calc(100vh - 1rem);
+        margin: .5rem auto;
+    }
+    #chiSiamoModal .modal-content { max-height: 100%; overflow: hidden; }
+    #chiSiamoModal .modal-header,
+    #chiSiamoModal .modal-footer,
+    #chiSiamoModal .chi-siamo-media { flex: 0 0 auto; }
+    #chiSiamoModal .modal-body {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+        padding: 0;
+    }
+    #chiSiamoModal .modal-header {
+        padding: .4rem .75rem;
+    }
+    #chiSiamoModal .modal-title {
+        font-size: 1rem;
+        line-height: 1.2;
+    }
+    #chiSiamoModal .modal-header .btn-close {
+        margin: 0;
+        padding: .45rem;
+    }
+    #chiSiamoModal .modal-footer {
+        padding: .35rem .75rem;
+    }
+    #chiSiamoModal .modal-footer .btn {
+        padding: .25rem .65rem;
+        font-size: .875rem;
+    }
     #chiSiamoModal .chi-siamo-image {
         display: block;
-        width: 100%;
-        height: clamp(180px, 34vh, 300px);
-        object-fit: cover;
-        object-position: center;
+        width: 85%;
+        height: auto;
+        margin: 0 auto;
     }
-    @media (max-height: 700px) {
-        #chiSiamoModal .chi-siamo-image { height: 180px; }
+    #chiSiamoModal .chi-siamo-text {
+        min-height: 0;
+        overflow-y: auto;
+        padding: .75rem 1rem 1rem;
+        line-height: 1.5;
+    }
+    #chiSiamoModal .chi-siamo-text h4,
+    #chiSiamoModal .chi-siamo-text h5 {
+        color: #212529;
+        font-weight: 700;
+    }
+    #chiSiamoModal .chi-siamo-text blockquote {
+        margin: 1rem 0 0;
+        padding: .75rem 1rem;
+        border-left: 4px solid #0d6efd;
+        background: #f5f8fc;
+        color: #24364b;
+        font-weight: 600;
     }
 </style>
 
 <div class="modal fade" id="chiSiamoModal" tabindex="-1" aria-labelledby="chiSiamoModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="chiSiamoModalLabel"><?= htmlspecialchars($nt['chi_siamo_title']) ?></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= htmlspecialchars($nt['chiudi']) ?>"></button>
             </div>
             <div class="modal-body">
-                <div class="row">
-                    <div class="col-12 mb-3">
-                        <img src="image/chi-siamo.webp"
-                             onerror="this.onerror=null;this.src='https://raw.githubusercontent.com/GGrosu74/Open_House/main/image/chi-siamo.webp';"
-                             alt="Studenti in un ambiente formativo con realtà virtuale e robotica"
-                             class="img-fluid chi-siamo-image" width="1280" height="500">
-                    </div>
-                    <div class="col-12 text-muted" style="line-height:1.5;">
-                        <h6><strong>L'innovazione al servizio dell'orientamento scolastico e della formazione</strong></h6>
-                        <p>La piattaforma offre un ecosistema digitale intuitivo che consente agli istituti di superare i limiti della presenza fisica, offrendo visite virtuali, attività interattive e strumenti per l'orientamento.</p>
-                        <p>Inclusività, accessibilità e visibilità per gli istituti sono i pilastri del progetto.</p>
-                    </div>
+                <div class="chi-siamo-media">
+                    <img src="image/chi-siamo.webp"
+                         onerror="this.onerror=null;this.src='https://raw.githubusercontent.com/GGrosu74/Open_House/main/image/chi-siamo.webp';"
+                         alt="Studenti in un ambiente formativo con realtà virtuale e robotica"
+                         class="img-fluid chi-siamo-image" width="1792" height="1024">
+                </div>
+                <div class="chi-siamo-text text-muted">
+                    <h4>CHI SIAMO</h4>
+                    <h5>Benvenuti in VR Open House</h5>
+                    <p><strong>VR Open House</strong> è la piattaforma di orientamento immersivo creata per guidare i giovani nella scelta del proprio percorso scolastico e professionale.</p>
+                    <p>Nata come progetto innovativo presso l’<strong>ITIS Pietro Paleocapa</strong>, la nostra missione è trasformare l'orientamento in un'esperienza reale, moderna e coinvolgente, superando i limiti delle tradizionali giornate di porte aperte.</p>
+
+                    <h5>La Nostra Visione</h5>
+                    <p>Crediamo che ogni studente debba avere l'opportunità di esplorare il proprio futuro senza barriere. Attraverso la tecnologia <strong>WebXR Open Source</strong>, colleghiamo studenti, scuole, università e aziende all'interno di un unico Hub virtuale interattivo.</p>
+
+                    <h5>I Nostri Tre Pilastri</h5>
+                    <ul>
+                        <li class="mb-2">🌐 <strong>Accessibilità Totale:</strong> Entra in laboratori 3D e ambienti scolastici da qualsiasi dispositivo (PC, smartphone o visore VR), direttamente dal tuo browser e senza installare alcuna app.</li>
+                        <li class="mb-2">📍 <strong>Inclusione sul Territorio:</strong> Abbattiamo il digital divide grazie alla rete di <strong>Arene VR e Arene Mobile</strong>, portando l'hardware di ultima generazione anche a chi non possiede un visore a casa.</li>
+                        <li>📜 <strong>Formazione Certificata:</strong> Offriamo percorsi trasparenti e sicuri che tracciano le presenze per la certificazione delle ore di Formazione Scuola-Lavoro (FSL).</li>
+                    </ul>
+
+                    <blockquote>“Un ponte tra scuola, tecnologia e mondo del lavoro per rendere l'orientamento e la formazione un'opportunità aperta a tutti.”</blockquote>
                 </div>
             </div>
             <div class="modal-footer">
