@@ -11,6 +11,7 @@ $flash = '';
 $flashType = 'success';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    requireCsrf();
     $activityId = (int)($_POST['activity_id'] ?? 0);
     $action = $_POST['action'] ?? '';
 

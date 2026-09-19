@@ -55,7 +55,8 @@ if (isLoggedIn()) {
 
 $posti_disponibili = $attivita['max_partecipanti'] - $attivita['prenotazioni_count'];
 $video_embed_url = !empty($attivita['materiali']) ? youtubeEmbedUrl($attivita['materiali']) : null;
-$webxrUrl = resolveWebxrUrl((string) $attivita['titolo'], $attivita['link_webxr'] ?? null);
+$webxrUrl = availableActivityUrl(resolveWebxrUrl((string) $attivita['titolo'], $attivita['link_webxr'] ?? null));
+$materialUrl = availableActivityUrl($attivita['materiali'] ?? null);
 ?>
 <!DOCTYPE html>
 <html lang="<?= $lang ?>">
@@ -125,6 +126,11 @@ $webxrUrl = resolveWebxrUrl((string) $attivita['titolo'], $attivita['link_webxr'
                             </a>
                         <?php endif; ?>
 
+                        <?php if (!$video_embed_url && $materialUrl !== ''): ?>
+                            <hr>
+                            <a href="<?= htmlspecialchars($materialUrl) ?>" class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer">Apri materiali dell’attività</a>
+                        <?php endif; ?>
+
                         <?php if (isLoggedIn() && $_SESSION['user_type'] === 'utente' && $webxrUrl !== ''): ?>
                             <hr>
                             <div class="d-grid gap-2">
@@ -135,7 +141,7 @@ $webxrUrl = resolveWebxrUrl((string) $attivita['titolo'], $attivita['link_webxr'
                                     }
                                 ?>
                                 <a href="<?= htmlspecialchars($webxrUrl) ?>" class="btn btn-success" target="_blank" rel="noopener noreferrer">
-                                    <i class="bi bi-box-arrow-up-right"></i> Apri simulazione WebXR
+                                    <i class="bi bi-box-arrow-up-right"></i> Apri contenuto dell’attività
                                 </a>
                             </div>
                         <?php endif; ?>

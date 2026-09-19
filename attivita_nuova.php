@@ -8,6 +8,7 @@ $error = '';
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    requireCsrf();
     $titolo = sanitize($_POST['titolo'] ?? '');
     $descrizione = sanitize($_POST['descrizione'] ?? '');
     $tipo_attivita = $_POST['tipo_attivita'] ?? '';
@@ -15,8 +16,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $durata_minuti = intval($_POST['durata_minuti'] ?? 60);
     $max_partecipanti = intval($_POST['max_partecipanti'] ?? 50);
     $supporta_vr = isset($_POST['supporta_vr']) ? 1 : 0;
-    $url_vr = sanitize($_POST['url_vr'] ?? '');
-    $materiali_url = sanitize($_POST['materiali_url'] ?? '');
+    $url_vr = trim($_POST['url_vr'] ?? '');
+    $materiali_url = trim($_POST['materiali_url'] ?? '');
     $stato = 'bozza';
 
     if ($max_partecipanti<1 || $max_partecipanti>10000 || $durata_minuti<1 || $durata_minuti>1440 || !validActivityUrl($url_vr) || !validActivityUrl($materiali_url) || !in_array($tipo_attivita,['presentazione','laboratorio','tour_virtuale','open_day','workshop','altro'],true) || !strtotime($data_ora)) {

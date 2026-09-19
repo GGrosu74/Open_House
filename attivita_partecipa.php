@@ -21,7 +21,9 @@ if (!$attivita) {
     exit;
 }
 $video_embed_url = !empty($attivita['materiali_url']) ? youtubeEmbedUrl($attivita['materiali_url']) : null;
-$webxrUrl = resolveWebxrUrl((string) $attivita['titolo'], $attivita['url_vr'] ?? null);
+$webxrUrl = availableActivityUrl(resolveWebxrUrl((string) $attivita['titolo'], $attivita['url_vr'] ?? null));
+$materialUrl = availableActivityUrl($attivita['materiali_url'] ?? null);
+$embedActivity = $attivita['supporta_vr'] && canEmbedActivityUrl($webxrUrl);
 
 // Carica messaggi chat
 $userTable = getUserTable($pdo, false);
@@ -51,9 +53,6 @@ $messaggi = $stmt->fetchAll();
         .modal-backdrop { z-index: 10040; }
         #chatMessages { min-height: 280px; max-height: 55vh; overflow-y: auto; }
     </style>
-    <?php if ($attivita['supporta_vr'] && $webxrUrl !== '' && validActivityUrl($webxrUrl)): ?>
-        <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <?php endif; ?>
 </head>
 <body class="bg-dark text-white">
     <?php include 'navbar.php'; ?>
@@ -66,8 +65,17 @@ $messaggi = $stmt->fetchAll();
     </div>
 
     <div class="container-fluid mt-3">
+        <?php if ($webxrUrl !== ''): ?>
+            <div class="mb-3">
+                <a href="<?= htmlspecialchars($webxrUrl) ?>" target="_blank" rel="noopener noreferrer" class="btn btn-outline-light">Apri contenuto in una nuova scheda</a>
+                <?php if ($embedActivity): ?><span class="small text-white-50 ms-2">Se il contenuto non si carica qui, aprilo in una nuova scheda.</span><?php endif; ?>
+            </div>
+        <?php endif; ?>
+        <?php if ($materialUrl !== '' && !$video_embed_url): ?>
+            <p><a class="btn btn-outline-info" href="<?= htmlspecialchars($materialUrl) ?>" target="_blank" rel="noopener noreferrer">Apri materiali dell’attività</a></p>
+        <?php endif; ?>
         <div class="row">
-            <?php if ($attivita['supporta_vr'] && $webxrUrl !== '' && validActivityUrl($webxrUrl)): ?>
+            <?php if ($embedActivity): ?>
                 <div class="col-12">
                     <div class="card bg-dark border-secondary">
                         <div class="card-body p-0" style="height: 80vh;">
@@ -91,10 +99,6 @@ $messaggi = $stmt->fetchAll();
                                 </div>
                                 <a href="<?= htmlspecialchars($attivita['materiali_url']) ?>" class="btn btn-outline-light mt-3" target="_blank" rel="noopener noreferrer">
                                     <i class="bi bi-youtube me-1"></i>Apri su YouTube
-                                </a>
-                            <?php elseif ($attivita['materiali_url']): ?>
-                                <a href="<?= htmlspecialchars($attivita['materiali_url']) ?>" class="btn btn-primary" target="_blank" rel="noopener noreferrer">
-                                    <i class="bi bi-download"></i> Scarica materiali
                                 </a>
                             <?php endif; ?>
                         </div>

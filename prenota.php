@@ -4,6 +4,7 @@ require_once 'config.php';
 requireRole(['utente','istituto','partner']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    requireCsrf();
     $attivita_id = intval($_POST['attivita_id'] ?? 0);
     $lang = $_POST['lang'] ?? 'it';
     $session_user_id = (int)($_SESSION['user_id'] ?? 0);

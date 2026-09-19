@@ -5,9 +5,10 @@ requireLogin();
 $attivita_id=0;
 $sent=false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    requireCsrf();
     $attivita_id = intval($_POST['attivita_id'] ?? 0);
     requireActivityAccess($pdo,$attivita_id);
-    $messaggio = sanitize($_POST['messaggio'] ?? '');
+    $messaggio = trim($_POST['messaggio'] ?? '');
 
     if (!empty($messaggio) && mb_strlen($messaggio)<=2000 && $attivita_id > 0) {
         $user_id = $_SESSION['user_id'];
@@ -26,6 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 if (strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'xmlhttprequest') {
+    if (!$sent) http_response_code(422);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['success' => $sent]);
     exit;

@@ -276,3 +276,33 @@ footer {
 .badge.bg-secondary {
     background-color: var(--secondary-color) !important;
 }
+
+/* Home: stessa palette Bootstrap della versione pubblicata. */
+body.home-page {
+    --primary-color: #0d6efd;
+    --bs-primary: #0d6efd;
+    --bs-primary-rgb: 13, 110, 253;
+    background-color: #fff;
+}
+
+.home-page section.bg-primary {
+    background: #0d6efd !important;
+}
+
+.home-page section.bg-light {
+    background-color: #f8f9fa !important;
+}
+
+.home-page .btn-primary {
+    background: var(--bs-btn-bg);
+}
+
+.home-page .btn-primary:hover,
+.home-page .btn-primary:focus-visible {
+    background: var(--bs-btn-hover-bg);
+}
+
+.home-page .btn-primary:active,
+.home-page .btn-primary.active {
+    background: var(--bs-btn-active-bg);
+}
